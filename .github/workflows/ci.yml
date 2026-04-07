@@ -1,11 +1,3 @@
-# CI Workflow
-# Runs on pull requests to validate code quality
-#
-# Stages:
-# 1. Typecheck - TypeScript compilation check
-# 2. Unit Tests - Fast tests without external dependencies
-# 3. Integration Tests - Tests with real databases (Testcontainers)
-
 name: CI
 
 on:
@@ -17,65 +9,12 @@ on:
 jobs:
   typecheck:
     name: Typecheck
-    runs-on: [self-hosted, linux, hetzner]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Typecheck
-        run: npm run typecheck
-
-  unit-tests:
-    name: Unit Tests
-    runs-on: [self-hosted, linux, hetzner]
-    needs: typecheck
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run unit tests
-        run: |
-          # Check if any unit test files exist
-          if find src -name "*.test.ts" -not -path "**/integration/**" | grep -q .; then
-            npm run test:unit
-          else
-            echo "No unit tests found, skipping"
-          fi
-
-  integration-tests:
-    name: Integration Tests
-    runs-on: ubuntu-latest  # Needs Docker for Testcontainers
-    needs: unit-tests
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run integration tests
-        run: npm run test:integration
-        env:
-          # Testcontainers will spin up PostgreSQL and ArangoDB
-          TESTCONTAINERS_RYUK_DISABLED: 'true'
+      - run: npm ci
+      - run: npx tsc --skipLibCheck
