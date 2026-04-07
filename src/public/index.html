@@ -1,0 +1,3810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conduit - Knowledge Intelligence Platform</title>
+  <style>
+    /* ─── Design Tokens (Dojo-aligned) ─────────────────────────────── */
+    :root {
+      --sky-400: #38bdf8; --sky-500: #0ea5e9; --sky-600: #0284c7;
+      --violet-400: #a78bfa; --violet-500: #8b5cf6; --violet-600: #7c3aed;
+      --indigo-400: #818cf8; --indigo-500: #6366f1;
+      --emerald-400: #34d399; --emerald-500: #10b981;
+      --amber-400: #fbbf24; --amber-500: #f59e0b;
+      --red-400: #f87171; --red-500: #ef4444;
+      --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb;
+      --gray-300: #d1d5db; --gray-400: #9ca3af; --gray-500: #6b7280;
+      --gray-600: #4b5563; --gray-700: #374151; --gray-800: #1f2937;
+      --gray-900: #111827; --gray-950: #030712;
+    }
+
+    .theme-dark {
+      --bg-base: var(--gray-950); --bg-primary: var(--gray-900); --bg-secondary: var(--gray-800);
+      --bg-elevated: #141924; --bg-hover: rgba(255,255,255,0.04);
+      --border-default: var(--gray-700); --border-light: var(--gray-800);
+      --text-primary: var(--gray-50); --text-secondary: var(--gray-400);
+      --text-tertiary: var(--gray-500); --text-muted: var(--gray-600);
+      --accent: var(--sky-500); --accent-hover: var(--sky-600);
+      --accent-text: var(--sky-400); --accent-bg: rgba(14,165,233,0.1);
+      --violet-accent: var(--violet-500); --violet-bg: rgba(139,92,246,0.1);
+      --success: var(--emerald-400); --success-bg: rgba(16,185,129,0.1);
+      --warning: var(--amber-400); --warning-bg: rgba(245,158,11,0.1);
+      --danger: var(--red-400); --danger-bg: rgba(239,68,68,0.1);
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.4);
+      --shadow-elevated: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .theme-light {
+      --bg-base: var(--gray-50); --bg-primary: #fff; --bg-secondary: var(--gray-50);
+      --bg-elevated: #fff; --bg-hover: rgba(0,0,0,0.03);
+      --border-default: var(--gray-200); --border-light: var(--gray-100);
+      --text-primary: var(--gray-900); --text-secondary: var(--gray-600);
+      --text-tertiary: var(--gray-500); --text-muted: var(--gray-400);
+      --accent: var(--sky-600); --accent-hover: var(--sky-500);
+      --accent-text: var(--sky-600); --accent-bg: rgba(14,165,233,0.08);
+      --violet-accent: var(--violet-600); --violet-bg: rgba(139,92,246,0.08);
+      --success: var(--emerald-500); --success-bg: rgba(16,185,129,0.08);
+      --warning: var(--amber-500); --warning-bg: rgba(245,158,11,0.08);
+      --danger: var(--red-500); --danger-bg: rgba(239,68,68,0.08);
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-elevated: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    /* ─── Reset & Base ─────────────────────────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    /* Subtle dot grid (Dojo-style) */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: -1;
+      opacity: 0.03;
+      background-image: radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0);
+      background-size: 32px 32px;
+      pointer-events: none;
+    }
+
+    /* ─── Scrollbar ────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+    /* ─── Layout ───────────────────────────────────────────────────── */
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ─── Sidebar ──────────────────────────────────────────────────── */
+    .sidebar {
+      width: 240px; min-width: 240px;
+      background: var(--bg-primary);
+      border-right: 1px solid var(--border-default);
+      display: flex; flex-direction: column;
+      padding: 20px 0;
+    }
+
+    .sidebar-brand {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border-light);
+      margin-bottom: 8px;
+    }
+
+    .sidebar-brand h1 {
+      font-size: 18px; font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--sky-400), var(--violet-500), var(--indigo-400), var(--sky-400));
+      background-size: 200% auto;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradient-shift 8s ease-in-out infinite;
+    }
+
+    .sidebar-brand .subtitle {
+      font-size: 11px; color: var(--text-tertiary);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-top: 2px;
+    }
+
+    @keyframes gradient-shift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .nav { flex: 1; padding: 8px 12px; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 8px;
+      font-size: 14px; font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer; transition: all 0.15s;
+      border: 1px solid transparent;
+      margin-bottom: 2px;
+    }
+
+    .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+    .nav-item.active {
+      background: var(--accent-bg); color: var(--accent-text);
+      border-color: rgba(14,165,233,0.15);
+    }
+
+    .nav-icon {
+      width: 18px; height: 18px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+
+    .sidebar-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .sidebar-stats {
+      display: flex; flex-direction: column; gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .sidebar-stat {
+      display: flex; justify-content: space-between;
+      font-size: 12px;
+    }
+
+    .sidebar-stat .label { color: var(--text-tertiary); }
+    .sidebar-stat .value { color: var(--text-secondary); font-weight: 600; font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace; }
+
+    .theme-toggle {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--text-tertiary);
+      cursor: pointer; padding: 6px 0;
+    }
+
+    .theme-toggle:hover { color: var(--text-secondary); }
+
+    /* ─── Main Content ─────────────────────────────────────────────── */
+    .main { flex: 1; overflow-y: auto; padding: 32px; }
+    .main-inner { max-width: 900px; margin: 0 auto; }
+
+    /* ─── Auth Wall ────────────────────────────────────────────────── */
+    .auth-wall {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 100vh; padding: 24px;
+      text-align: center;
+    }
+
+    .auth-logo {
+      font-size: 36px; font-weight: 800; letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--sky-400), var(--violet-500), var(--indigo-400), var(--sky-400));
+      background-size: 200% auto;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradient-shift 8s ease-in-out infinite;
+      margin-bottom: 4px;
+    }
+
+    .auth-tagline {
+      font-size: 14px; color: var(--text-tertiary);
+      margin-bottom: 32px; letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .auth-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: 16px; padding: 32px;
+      width: 100%; max-width: 400px;
+      box-shadow: var(--shadow-elevated);
+    }
+
+    .auth-card h2 { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+
+    .auth-tabs {
+      display: flex; gap: 0;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-default);
+      border-radius: 8px; overflow: hidden;
+    }
+
+    .auth-tab {
+      flex: 1; padding: 8px; text-align: center;
+      font-size: 13px; font-weight: 500;
+      color: var(--text-secondary);
+      background: transparent; border: none;
+      cursor: pointer; transition: all 0.15s;
+    }
+
+    .auth-tab.active {
+      background: var(--accent-bg); color: var(--accent-text);
+    }
+
+    .form-group { margin-bottom: 16px; }
+
+    .form-label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--text-tertiary); text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%; padding: 10px 14px;
+      background: var(--bg-base); border: 1px solid var(--border-default);
+      border-radius: 8px; color: var(--text-primary);
+      font-size: 14px; font-family: inherit;
+      transition: border-color 0.15s;
+    }
+
+    .form-input:focus { outline: none; border-color: var(--accent); }
+    .form-input::placeholder { color: var(--text-muted); }
+
+    .form-input.mono { font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace; font-size: 13px; }
+
+    .btn {
+      padding: 10px 20px; border-radius: 8px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+      border: none; display: inline-flex;
+      align-items: center; justify-content: center; gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--accent); color: white;
+      width: 100%;
+    }
+
+    .btn-primary:hover { filter: brightness(1.1); }
+
+    .btn-secondary {
+      background: var(--bg-hover); color: var(--text-secondary);
+      border: 1px solid var(--border-default);
+    }
+
+    .btn-secondary:hover { background: var(--bg-base); color: var(--text-primary); }
+
+    .btn-sm { padding: 6px 14px; font-size: 13px; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border-default);
+    }
+
+    .btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-accent {
+      background: var(--violet-accent); color: white;
+    }
+
+    .btn-accent:hover { filter: brightness(1.1); }
+
+    .auth-error {
+      padding: 10px; border-radius: 8px;
+      background: var(--danger-bg); color: var(--danger);
+      font-size: 13px; margin-bottom: 16px;
+    }
+
+    /* ─── Page Header ──────────────────────────────────────────────── */
+    .page-header { margin-bottom: 28px; }
+
+    .page-header h2 {
+      font-size: 22px; font-weight: 700;
+      letter-spacing: -0.02em; margin-bottom: 4px;
+    }
+
+    .page-header p { font-size: 14px; color: var(--text-tertiary); }
+
+    /* ─── Stat Cards ───────────────────────────────────────────────── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 12px; margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: 12px; padding: 16px;
+      transition: border-color 0.15s;
+    }
+
+    .stat-card:hover { border-color: var(--accent); }
+
+    .stat-value {
+      font-size: 28px; font-weight: 800;
+      font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-value.accent { color: var(--accent-text); }
+    .stat-value.violet { color: var(--violet-accent); }
+    .stat-value.emerald { color: var(--success); }
+    .stat-value.amber { color: var(--warning); }
+
+    .stat-label {
+      font-size: 11px; color: var(--text-tertiary);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-top: 4px;
+    }
+
+    /* ─── Search Bar ───────────────────────────────────────────────── */
+    .search-bar {
+      display: flex; gap: 8px; margin-bottom: 24px;
+    }
+
+    .search-bar .form-input { flex: 1; }
+
+    /* ─── Knowledge Cards ──────────────────────────────────────────── */
+    .card-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .knowledge-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: 12px; padding: 18px;
+      transition: all 0.15s; cursor: default;
+    }
+
+    .knowledge-card:hover { border-color: var(--accent); box-shadow: var(--shadow-card); }
+
+    .knowledge-card .title {
+      font-size: 15px; font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .knowledge-card .content {
+      font-size: 13px; color: var(--text-secondary);
+      line-height: 1.6; margin-bottom: 12px;
+      display: -webkit-box; -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    .knowledge-card .meta {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex; padding: 2px 10px;
+      border-radius: 6px; font-size: 11px; font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-domain { background: var(--accent-bg); color: var(--accent-text); }
+    .badge-type { background: var(--violet-bg); color: var(--violet-accent); }
+    .badge-source { background: var(--bg-hover); color: var(--text-tertiary); }
+    .badge-success { background: var(--success-bg); color: var(--success); }
+    .badge-warning { background: var(--warning-bg); color: var(--warning); }
+
+    .score {
+      font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+      font-size: 11px; color: var(--success);
+      margin-left: auto;
+    }
+
+    /* ─── Ingest View ──────────────────────────────────────────────── */
+    .ingest-modes {
+      display: flex; gap: 0; margin-bottom: 20px;
+      border: 1px solid var(--border-default);
+      border-radius: 8px; overflow: hidden;
+    }
+
+    .ingest-mode {
+      flex: 1; padding: 10px; text-align: center;
+      font-size: 13px; font-weight: 500;
+      color: var(--text-secondary); background: transparent;
+      border: none; cursor: pointer; transition: all 0.15s;
+    }
+
+    .ingest-mode.active { background: var(--accent-bg); color: var(--accent-text); }
+
+    .ingest-panel {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: 12px; padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .form-textarea {
+      width: 100%; min-height: 160px; padding: 12px 14px;
+      background: var(--bg-base); border: 1px solid var(--border-default);
+      border-radius: 8px; color: var(--text-primary);
+      font-size: 14px; font-family: inherit;
+      resize: vertical; transition: border-color 0.15s;
+    }
+
+    .form-textarea:focus { outline: none; border-color: var(--accent); }
+    .form-textarea::placeholder { color: var(--text-muted); }
+
+    .form-row { display: flex; gap: 12px; margin-top: 12px; align-items: end; }
+
+    .form-select {
+      padding: 10px 14px;
+      background: var(--bg-base); border: 1px solid var(--border-default);
+      border-radius: 8px; color: var(--text-primary);
+      font-size: 14px; font-family: inherit;
+    }
+
+    .ingest-results { margin-top: 24px; }
+
+    .ingest-results h3 {
+      font-size: 14px; font-weight: 600;
+      color: var(--text-tertiary); text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: 12px;
+    }
+
+    .result-summary {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: 12px; padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .result-summary .result-stats {
+      display: flex; gap: 20px; margin-bottom: 8px;
+    }
+
+    .result-stat { font-size: 13px; }
+    .result-stat .n { font-weight: 700; font-family: 'SF Mono', ui-monospace, monospace; }
+    .result-stat .n.novel { color: var(--success); }
+    .result-stat .n.dup { color: var(--warning); }
+    .result-stat .n.disc { color: var(--text-muted); }
+
+    .result-summary .summary-text {
+      font-size: 13px; color: var(--text-secondary); font-style: italic;
+    }
+
+    /* ─── Ask View ─────────────────────────────────────────────────── */
+    /* Ask view — dead simple, no flex tricks */
+    .ask-container { max-width: 900px; margin: 0 auto; }
+
+    .ask-messages {
+      /* flex:1 + overflow handled inline; this just provides defaults */
+    }
+
+    .ask-empty {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100%; text-align: center;
+      color: var(--text-tertiary);
+    }
+
+    .ask-empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
+    .ask-empty h3 { font-size: 18px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+    .ask-empty p { font-size: 14px; max-width: 400px; }
+
+    .ask-empty .suggestions {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      justify-content: center; margin-top: 20px;
+    }
+
+    .ask-empty .suggestion {
+      padding: 8px 14px; border-radius: 20px;
+      font-size: 13px; color: var(--text-secondary);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      cursor: pointer; transition: all 0.15s;
+    }
+
+    .ask-empty .suggestion:hover {
+      border-color: var(--accent); color: var(--accent-text);
+    }
+
+    .message { margin-bottom: 20px; animation: fadeIn 0.3s ease; }
+
+    .message-user {
+      display: flex; justify-content: flex-end;
+    }
+
+    .message-user .bubble {
+      background: var(--accent); color: white;
+      padding: 10px 16px; border-radius: 16px 16px 4px 16px;
+      max-width: 70%; font-size: 14px;
+    }
+
+    .message-system { margin-bottom: 24px; }
+
+    .message-system .system-label {
+      font-size: 11px; font-weight: 600; color: var(--accent-text);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .message-system .context-count {
+      font-size: 11px; color: var(--text-tertiary);
+      font-weight: 400; text-transform: none; letter-spacing: normal;
+    }
+
+    .message-system .system-hint {
+      font-size: 12px; color: var(--text-muted);
+      margin-top: 8px; font-style: italic;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .ask-input-bar {
+      display: flex; gap: 8px;
+      padding: 16px 0 8px;
+      border-top: 1px solid var(--border-light);
+      flex-shrink: 0;
+    }
+
+    .ask-input-bar .form-input {
+      flex: 1; padding: 12px 16px; font-size: 15px;
+      border-radius: 12px;
+    }
+
+    /* ─── Domain Breakdown ─────────────────────────────────────────── */
+    .domain-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px; margin-top: 16px;
+    }
+
+    .domain-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: 10px; padding: 14px;
+    }
+
+    .domain-card .domain-name {
+      font-size: 13px; font-weight: 600; margin-bottom: 4px;
+    }
+
+    .domain-card .domain-count {
+      font-size: 22px; font-weight: 800;
+      font-family: 'SF Mono', ui-monospace, monospace;
+      color: var(--accent-text);
+    }
+
+    .domain-card .domain-topics {
+      font-size: 11px; color: var(--text-tertiary);
+      margin-top: 6px;
+    }
+
+    /* ─── Loading ──────────────────────────────────────────────────── */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border-default);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-bar {
+      height: 2px; background: var(--border-light);
+      border-radius: 1px; overflow: hidden;
+      margin: 12px 0;
+    }
+
+    .loading-bar .fill {
+      height: 100%; width: 30%;
+      background: linear-gradient(90deg, var(--sky-400), var(--violet-500));
+      border-radius: 1px;
+      animation: loading-slide 1.2s ease-in-out infinite;
+    }
+
+    @keyframes loading-slide {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(400%); }
+    }
+
+    /* ─── Empty State ──────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center; padding: 48px 24px;
+      color: var(--text-tertiary);
+    }
+
+    .empty-state .icon { font-size: 36px; margin-bottom: 12px; opacity: 0.3; }
+    .empty-state p { font-size: 14px; }
+
+    /* ─── Section Header ───────────────────────────────────────────── */
+    .section-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .section-header h3 {
+      font-size: 12px; font-weight: 700;
+      color: var(--text-tertiary); text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .section-header .count {
+      font-size: 11px; color: var(--text-muted);
+      font-family: 'SF Mono', ui-monospace, monospace;
+    }
+
+    /* ─── Responsive ───────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .main { padding: 16px; }
+    }
+
+    /* ─── Utilities ────────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+    .flex-center { display: flex; align-items: center; justify-content: center; }
+    .mt-12 { margin-top: 12px; }
+    .mt-16 { margin-top: 16px; }
+    .mb-16 { margin-bottom: 16px; }
+    .gap-8 { gap: 8px; }
+    .text-sm { font-size: 13px; }
+    .text-muted { color: var(--text-tertiary); }
+  </style>
+</head>
+<body class="theme-dark">
+
+  <!-- ─── Auth Wall ──────────────────────────────────────────────── -->
+  <div id="auth-wall" class="auth-wall">
+    <div class="auth-logo">Conduit</div>
+    <div class="auth-tagline">Knowledge Intelligence Platform</div>
+
+    <div class="auth-card">
+      <!-- Cognito sign-in (shown when Cognito is enabled) -->
+      <div id="auth-cognito" class="hidden">
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;text-align:center">
+          Sign in to manage your API keys and explore the knowledge graph.
+        </p>
+        <button class="btn btn-primary" style="width:100%" onclick="window.location.href='/api/v1/auth/cognito/login'">Sign In</button>
+        <div style="margin:20px 0;text-align:center;font-size:12px;color:var(--text-muted)">or connect with an existing key</div>
+        <div class="form-group">
+          <input type="password" id="api-key-input-cognito" class="form-input mono"
+                 placeholder="cnd_xxxxxxxxxx" onkeydown="if(event.key==='Enter')connect()" style="font-size:12px" />
+        </div>
+        <button class="btn btn-secondary" style="width:100%;font-size:12px" onclick="connectFromCognito()">Connect with API Key</button>
+      </div>
+
+      <!-- Legacy auth (shown when Cognito is not enabled) -->
+      <div id="auth-legacy">
+        <div class="auth-tabs">
+          <button class="auth-tab active" onclick="showAuthTab('connect')">Connect</button>
+          <button class="auth-tab" onclick="showAuthTab('signup')">Sign Up</button>
+        </div>
+
+        <div id="auth-error" class="auth-error hidden"></div>
+
+        <!-- Connect tab -->
+        <div id="tab-connect">
+          <div class="form-group">
+            <label class="form-label">API Key</label>
+            <input type="password" id="api-key-input" class="form-input mono"
+                   placeholder="cnd_xxxxxxxxxx" onkeydown="if(event.key==='Enter')connect()" />
+          </div>
+          <button class="btn btn-primary" onclick="connect()">Connect</button>
+        </div>
+
+        <!-- Signup tab -->
+        <div id="tab-signup" class="hidden">
+          <div class="form-group">
+            <label class="form-label">Organization Name</label>
+            <input type="text" id="signup-org" class="form-input" placeholder="Acme Corp" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" id="signup-email" class="form-input"
+                   placeholder="you@company.com" onkeydown="if(event.key==='Enter')signup()" />
+          </div>
+          <button class="btn btn-primary" onclick="signup()">Create Account</button>
+        </div>
+
+        <!-- Signup success -->
+        <div id="tab-signup-success" class="hidden">
+          <div style="text-align:center;margin-bottom:16px">
+            <div style="font-size:32px;margin-bottom:8px">&#9889;</div>
+            <h3 style="font-size:16px;font-weight:600;margin-bottom:4px">Account Created</h3>
+            <p style="font-size:13px;color:var(--text-tertiary)">Save these keys securely. They won't be shown again.</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">API Key</label>
+            <input type="text" id="signup-api-key" class="form-input mono" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Admin Key</label>
+            <input type="text" id="signup-admin-key" class="form-input mono" readonly />
+          </div>
+          <button class="btn btn-primary" onclick="connectWithNewKey()">Continue to Dashboard</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Main App ───────────────────────────────────────────────── -->
+  <div id="app-main" class="app hidden">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <h1>Conduit</h1>
+        <div class="subtitle">Knowledge Intelligence</div>
+      </div>
+
+      <nav class="nav">
+        <div class="nav-item active" data-view="knowledge" onclick="switchView('knowledge')">
+          <span class="nav-icon">&#9670;</span> Knowledge
+        </div>
+        <div class="nav-item" data-view="ingest" onclick="switchView('ingest')">
+          <span class="nav-icon">&#8853;</span> Import
+        </div>
+        <div class="nav-item" data-view="graph" onclick="switchView('graph')">
+          <span class="nav-icon">&#9733;</span> Topology
+        </div>
+        <div class="nav-item" data-view="ask" onclick="switchView('ask')">
+          <span class="nav-icon">&gt;_</span> Ask
+        </div>
+        <div class="nav-item" data-view="keys" id="nav-keys" style="display:none" onclick="switchView('keys')">
+          <span class="nav-icon">&#128273;</span> API Keys
+        </div>
+      </nav>
+
+      <!-- Kai Switcher -->
+      <div id="kai-switcher" style="padding:12px 16px;border-top:1px solid var(--border-light);display:none">
+        <label style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;display:block">Knowledge View</label>
+        <select id="kai-select" onchange="selectKai(this.value)" style="width:100%;padding:6px 8px;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-default);border-radius:6px;font-size:12px;cursor:pointer">
+          <option value="">All Knowledge</option>
+        </select>
+        <div style="margin-top:6px;display:flex;gap:4px">
+          <button onclick="showCreateKaiModal()" style="flex:1;padding:4px 8px;font-size:11px;background:none;border:1px solid var(--border-default);border-radius:4px;color:var(--text-secondary);cursor:pointer">+ New Kai</button>
+          <button id="kai-delete-btn" onclick="deleteCurrentKai()" style="padding:4px 8px;font-size:11px;background:none;border:1px solid var(--danger);border-radius:4px;color:var(--danger);cursor:pointer;display:none">Delete</button>
+        </div>
+      </div>
+
+      <!-- Create Kai Modal -->
+      <div id="kai-modal" class="hidden" style="position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.classList.add('hidden')">
+        <div style="background:var(--bg-primary);border:1px solid var(--border-default);border-radius:12px;padding:24px;width:400px;max-width:90vw">
+          <h3 style="margin-bottom:16px;font-size:16px">Create Knowledge View</h3>
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Name</label>
+            <input id="kai-name" type="text" placeholder="e.g. AWS Infrastructure" style="width:100%;padding:8px;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-default);border-radius:6px;font-size:13px" />
+          </div>
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Description</label>
+            <input id="kai-desc" type="text" placeholder="Optional description" style="width:100%;padding:8px;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-default);border-radius:6px;font-size:13px" />
+          </div>
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Domains (comma-separated)</label>
+            <input id="kai-domains" type="text" placeholder="e.g. aws, infrastructure" style="width:100%;padding:8px;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-default);border-radius:6px;font-size:13px" />
+            <div id="kai-domain-hints" style="margin-top:4px;font-size:11px;color:var(--text-tertiary)"></div>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Topics (comma-separated)</label>
+            <input id="kai-topics" type="text" placeholder="e.g. s3, lambda, iam" style="width:100%;padding:8px;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-default);border-radius:6px;font-size:13px" />
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button onclick="document.getElementById('kai-modal').classList.add('hidden')" style="padding:8px 16px;background:none;border:1px solid var(--border-default);border-radius:6px;color:var(--text-secondary);cursor:pointer;font-size:13px">Cancel</button>
+            <button onclick="createKai()" style="padding:8px 16px;background:var(--accent);border:none;border-radius:6px;color:white;cursor:pointer;font-size:13px;font-weight:600">Create</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-stats">
+          <div class="sidebar-stat">
+            <span class="label">Zettels</span>
+            <span class="value" id="sidebar-zettels">-</span>
+          </div>
+          <div class="sidebar-stat">
+            <span class="label">Chunks</span>
+            <span class="value" id="sidebar-chunks">-</span>
+          </div>
+          <div class="sidebar-stat">
+            <span class="label">Domains</span>
+            <span class="value" id="sidebar-domains">-</span>
+          </div>
+        </div>
+        <div class="theme-toggle" onclick="toggleTheme()">
+          <span id="theme-icon">&#9789;</span>
+          <span id="theme-label">Light mode</span>
+        </div>
+        <div class="theme-toggle" onclick="disconnect()" style="margin-top:4px;color:var(--danger)">
+          <span>&#10005;</span> <span>Disconnect</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Content Area -->
+    <main class="main">
+      <div class="main-inner">
+
+        <!-- ─── Knowledge View ─────────────────────────────────── -->
+        <div id="view-knowledge">
+          <div class="page-header">
+            <h2>Knowledge Graph</h2>
+            <p>Browse and search your organizational knowledge</p>
+          </div>
+
+          <div class="stats-row" id="stats-row"></div>
+
+          <div class="search-bar">
+            <input type="text" class="form-input" id="knowledge-search"
+                   placeholder="Semantic search across your knowledge..."
+                   onkeydown="if(event.key==='Enter')searchKnowledge()" />
+            <button class="btn btn-secondary btn-sm" onclick="searchKnowledge()">Search</button>
+            <button class="btn btn-ghost btn-sm" onclick="loadAllKnowledge()">Browse All</button>
+          </div>
+
+          <div id="domain-section"></div>
+          <div id="knowledge-results"></div>
+        </div>
+
+        <!-- ─── Ingest View ────────────────────────────────────── -->
+        <div id="view-ingest" class="hidden">
+          <div class="page-header">
+            <h2>Import Knowledge</h2>
+            <p>Bring in knowledge from URLs, text, or connected data sources</p>
+          </div>
+
+          <div class="ingest-modes">
+            <button class="ingest-mode active" onclick="switchIngestMode('url')">URL</button>
+            <button class="ingest-mode" onclick="switchIngestMode('text')">Text</button>
+            <button class="ingest-mode" onclick="switchIngestMode('connector')">Connector</button>
+          </div>
+
+          <!-- URL mode -->
+          <div id="ingest-url" class="ingest-panel">
+            <div class="form-group">
+              <label class="form-label">Source URL</label>
+              <input type="text" id="ingest-url-input" class="form-input"
+                     placeholder="https://docs.example.com/guide" />
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:1">
+                <label class="form-label">Domain Hints (comma-separated)</label>
+                <input type="text" id="ingest-url-domains" class="form-input"
+                       placeholder="kubernetes, devops" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Max Units</label>
+                <input type="number" id="ingest-url-max" class="form-input"
+                       value="10" min="1" max="50" style="width:80px" />
+              </div>
+            </div>
+            <div class="form-row">
+              <button class="btn btn-secondary btn-sm" onclick="ingestURL(true)" id="btn-preview-url">Preview</button>
+              <button class="btn btn-primary btn-sm" onclick="ingestURL(false)" id="btn-extract-url">Extract & Store</button>
+            </div>
+          </div>
+
+          <!-- Text mode -->
+          <div id="ingest-text" class="ingest-panel hidden">
+            <div class="form-group">
+              <label class="form-label">Content</label>
+              <textarea id="ingest-text-input" class="form-textarea"
+                        placeholder="Paste article text, documentation, meeting notes, or any knowledge content..."></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Source Type</label>
+                <select id="ingest-text-source" class="form-select">
+                  <option value="documentation">Documentation</option>
+                  <option value="research">Research</option>
+                  <option value="discussion">Discussion</option>
+                  <option value="experience">Experience</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex:1">
+                <label class="form-label">Domain Hints</label>
+                <input type="text" id="ingest-text-domains" class="form-input"
+                       placeholder="python, architecture" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Max Units</label>
+                <input type="number" id="ingest-text-max" class="form-input"
+                       value="10" min="1" max="50" style="width:80px" />
+              </div>
+            </div>
+            <div class="form-row">
+              <button class="btn btn-secondary btn-sm" onclick="ingestText(true)">Preview</button>
+              <button class="btn btn-primary btn-sm" onclick="ingestText(false)">Extract & Store</button>
+            </div>
+          </div>
+
+          <!-- Connector mode -->
+          <div id="ingest-connector" class="ingest-panel hidden">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Connector Type</label>
+                <select id="source-type" class="form-select" onchange="onSourceTypeChange()">
+                  <option value="filesystem">Filesystem</option>
+                  <option value="github">GitHub</option>
+                  <option value="postgresql">PostgreSQL</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex:1">
+                <label class="form-label">Source Name</label>
+                <input type="text" id="source-name" class="form-input" placeholder="my-docs" />
+              </div>
+            </div>
+
+            <div id="source-settings-filesystem">
+              <div class="form-group">
+                <label class="form-label">Directory Path</label>
+                <input type="text" id="source-path" class="form-input" placeholder="~/Documents/knowledge" />
+              </div>
+              <div class="form-row">
+                <div class="form-group" style="flex:1">
+                  <label class="form-label">Include Patterns (comma-separated globs)</label>
+                  <input type="text" id="source-include" class="form-input" placeholder="**/*.md, **/*.pdf" />
+                </div>
+                <div class="form-group" style="flex:1">
+                  <label class="form-label">Exclude Patterns</label>
+                  <input type="text" id="source-exclude" class="form-input" placeholder="node_modules/**, .git/**" />
+                </div>
+              </div>
+            </div>
+
+            <div id="source-settings-github" class="hidden">
+              <div class="form-row">
+                <div class="form-group" style="flex:1">
+                  <label class="form-label">Owner</label>
+                  <input type="text" id="github-owner" class="form-input" placeholder="datakailabs" />
+                </div>
+                <div class="form-group" style="flex:1">
+                  <label class="form-label">Repository</label>
+                  <input type="text" id="github-repo" class="form-input" placeholder="conduit" />
+                </div>
+                <div class="form-group" style="flex:0.5">
+                  <label class="form-label">Branch</label>
+                  <input type="text" id="github-branch" class="form-input" placeholder="main" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Token (PAT)</label>
+                <input type="password" id="github-token" class="form-input" placeholder="ghp_..." />
+              </div>
+              <div class="form-row">
+                <div class="form-group" style="flex:1">
+                  <label class="form-label">Include Patterns (comma-separated globs)</label>
+                  <input type="text" id="github-include" class="form-input" placeholder="docs/**, *.md, README*" />
+                </div>
+                <div class="form-group" style="flex:1">
+                  <label class="form-label">Exclude Patterns</label>
+                  <input type="text" id="github-exclude" class="form-input" placeholder="vendor/**, node_modules/**" />
+                </div>
+              </div>
+            </div>
+
+            <div id="source-settings-postgresql" class="hidden">
+              <div class="form-group">
+                <label class="form-label">Connection String</label>
+                <input type="password" id="pg-connection" class="form-input" placeholder="postgresql://user:pass@host:5432/database" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">SQL Query</label>
+                <textarea id="pg-query" class="form-input" rows="3" placeholder="SELECT id, title, content, updated_at FROM articles WHERE published = true"></textarea>
+              </div>
+              <div class="form-row">
+                <div class="form-group" style="flex:1">
+                  <label class="form-label">ID Column</label>
+                  <input type="text" id="pg-col-id" class="form-input" placeholder="id" />
+                </div>
+                <div class="form-group" style="flex:1">
+                  <label class="form-label">Title Column</label>
+                  <input type="text" id="pg-col-title" class="form-input" placeholder="title" />
+                </div>
+                <div class="form-group" style="flex:1">
+                  <label class="form-label">Content Column(s)</label>
+                  <input type="text" id="pg-col-content" class="form-input" placeholder="content (or: title, body)" />
+                </div>
+                <div class="form-group" style="flex:1">
+                  <label class="form-label">Modified Column</label>
+                  <input type="text" id="pg-col-modified" class="form-input" placeholder="updated_at (optional)" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Domain Hints (comma-separated)</label>
+              <input type="text" id="source-domains" class="form-input" placeholder="engineering, architecture" />
+            </div>
+
+            <div class="form-row">
+              <button class="btn btn-secondary btn-sm" onclick="discoverSource()" id="btn-discover">Discover</button>
+              <button class="btn btn-primary btn-sm" onclick="syncSource()" id="btn-sync">Sync</button>
+            </div>
+          </div>
+
+          <div id="ingest-loading" class="hidden">
+            <div class="loading-bar"><div class="fill"></div></div>
+            <p class="text-sm text-muted" style="text-align:center" id="ingest-loading-text">Extracting knowledge units via LLM...</p>
+          </div>
+
+          <div id="ingest-results"></div>
+        </div>
+
+        <!-- ─── Ask View ───────────────────────────────────────── -->
+        <div id="view-ask" class="hidden" style="display:none;flex-direction:column;position:fixed;top:0;right:0;bottom:0;left:240px;overflow:hidden;padding:0 32px">
+          <div class="ask-container" style="display:flex;flex-direction:column;height:100%;max-width:900px;margin:0 auto;width:100%">
+            <div class="ask-messages" id="ask-messages" style="flex:1;overflow-y:auto;padding:20px 0 12px">
+              <div class="ask-empty">
+                <div class="ask-empty-icon" style="font-size:32px;font-family:monospace;opacity:0.2">&gt;_</div>
+                <h3>Ask your knowledge graph</h3>
+                <p>Conduit searches across your ingested knowledge and returns semantically relevant context. This is what powers your AI assistants and chatbots.</p>
+                <div class="suggestions">
+                  <div class="suggestion" onclick="askQuestion('How does Delta Lake handle schema evolution?')">Delta Lake schema evolution</div>
+                  <div class="suggestion" onclick="askQuestion('What is Unity Catalog and how does it manage access control?')">Unity Catalog access control</div>
+                  <div class="suggestion" onclick="askQuestion('Compare Delta Live Tables and traditional ETL pipelines')">DLT vs traditional ETL</div>
+                  <div class="suggestion" onclick="askQuestion('How does asyncio concurrency work in Python?')">Python asyncio concurrency</div>
+                </div>
+              </div>
+            </div>
+            <div style="padding:12px 0 16px;border-top:1px solid var(--border-light)">
+              <div style="display:flex;gap:8px;width:100%">
+                <input type="text" id="ask-input"
+                       placeholder="Ask a question about your knowledge..."
+                       onkeydown="if(event.key==='Enter')askFromInput()"
+                       style="flex:1;padding:12px 16px;font-size:15px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:12px;color:var(--text-primary);font-family:inherit;outline:none;min-width:0" />
+                <button onclick="askFromInput()"
+                        style="padding:12px 24px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">Ask</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:8px;font-size:13px;color:var(--text-secondary)">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+                  <input type="checkbox" id="swarm-toggle" style="accent-color:var(--violet-500);width:14px;height:14px" />
+                  <span style="color:var(--violet-accent);font-weight:500">Swarm Mode</span>
+                </label>
+                <span style="color:var(--text-tertiary);font-size:11px">Multi-agent debate for deeper analysis (slower)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── Graph Topology View ──────────────────────────────── -->
+        <div id="view-graph" class="hidden" style="display:none;flex-direction:column;position:fixed;top:0;right:0;bottom:0;left:240px;overflow:hidden;padding:0">
+          <div style="padding:16px 24px 8px;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <h2 style="font-size:18px;font-weight:600;margin:0">Topology</h2>
+                  <span id="graph-breadcrumb" style="font-size:13px;color:var(--text-tertiary)"></span>
+                </div>
+                <p style="font-size:12px;color:var(--text-tertiary);margin:2px 0 0" id="graph-status">Loading graph...</p>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="position:relative">
+                <input id="graph-search" type="text" placeholder="Search concepts..." style="padding:6px 10px 6px 28px;font-size:12px;width:200px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);outline:none" onkeydown="if(event.key==='Enter')graphRenderer.search(this.value)" />
+                <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text-tertiary);pointer-events:none">&#x1F50D;</span>
+              </div>
+              <select id="graph-color-by" onchange="graphRenderer.recolor()" style="padding:6px 10px;font-size:12px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary)">
+                <option value="domain">Color by domain</option>
+                <option value="type">Color by type</option>
+              </select>
+              <button onclick="graphRenderer.goOverview()" style="padding:6px 12px;font-size:12px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:6px;color:var(--text-secondary);cursor:pointer">Overview</button>
+              <button onclick="graphRenderer.resetView()" style="padding:6px 12px;font-size:12px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:6px;color:var(--text-secondary);cursor:pointer">Reset</button>
+            </div>
+          </div>
+          <div style="flex:1;position:relative;overflow:hidden">
+            <canvas id="graph-canvas" style="width:100%;height:100%;cursor:grab"></canvas>
+            <!-- Hover tooltip -->
+            <div id="graph-tooltip" style="display:none;position:absolute;pointer-events:none;background:var(--bg-primary);border:1px solid var(--border-default);border-radius:8px;padding:10px 14px;max-width:300px;box-shadow:var(--shadow-elevated);z-index:10">
+              <div id="graph-tooltip-title" style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px"></div>
+              <div id="graph-tooltip-meta" style="font-size:11px;color:var(--text-secondary)"></div>
+            </div>
+            <!-- Legend toggle button -->
+            <button id="graph-legend-toggle" onclick="toggleGraphLegend()" style="position:absolute;bottom:12px;left:12px;width:32px;height:32px;background:var(--bg-primary);border:1px solid var(--border-default);border-radius:8px;box-shadow:var(--shadow-card);z-index:11;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:14px;color:var(--text-secondary)" title="Show legend">&#9632;</button>
+            <!-- Legend panel -->
+            <div id="graph-legend" style="position:absolute;bottom:12px;left:12px;background:var(--bg-primary);border:1px solid var(--border-default);border-radius:10px;padding:0;box-shadow:var(--shadow-elevated);z-index:10;width:190px;font-size:11px;overflow:hidden">
+              <div style="padding:8px 12px 6px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-light)">
+                <span style="font-weight:600;color:var(--text-secondary);font-size:11px;letter-spacing:0.5px;text-transform:uppercase">Legend</span>
+                <button onclick="toggleGraphLegend()" style="background:none;border:none;color:var(--text-tertiary);cursor:pointer;font-size:14px;padding:0;line-height:1" title="Hide legend">&times;</button>
+              </div>
+              <div id="graph-legend-items" style="padding:6px 10px 8px;max-height:240px;overflow-y:auto"></div>
+            </div>
+            <!-- Node detail panel (click) -->
+            <div id="graph-detail" style="display:none;position:absolute;top:12px;right:12px;width:320px;max-height:calc(100% - 24px);overflow-y:auto;background:var(--bg-primary);border:1px solid var(--border-default);border-radius:12px;padding:16px;box-shadow:var(--shadow-elevated);z-index:10">
+              <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+                <div id="graph-detail-title" style="font-size:14px;font-weight:600;color:var(--text-primary);flex:1"></div>
+                <button onclick="graphRenderer.closeDetail()" style="background:none;border:none;color:var(--text-tertiary);font-size:16px;cursor:pointer;padding:0 0 0 8px">&times;</button>
+              </div>
+              <div id="graph-detail-badges" style="margin-bottom:8px"></div>
+              <div id="graph-detail-connections" style="font-size:12px;color:var(--text-secondary)"></div>
+              <div style="margin-top:10px;display:flex;gap:6px">
+                <button id="graph-detail-edit" onclick="" style="flex:1;padding:6px 0;font-size:12px;background:var(--accent);border:none;border-radius:6px;color:white;cursor:pointer;font-weight:500">Edit</button>
+                <button id="graph-detail-delete" onclick="" style="padding:6px 12px;font-size:12px;background:none;border:1px solid var(--danger);border-radius:6px;color:var(--danger);cursor:pointer">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── API Keys View ──────────────────────────────────── -->
+        <div id="view-keys" class="hidden">
+          <div class="page-header">
+            <h2>API Keys</h2>
+            <p>Manage keys for programmatic access to Conduit APIs</p>
+          </div>
+
+          <!-- Onboarding prompt (shown when no key connected) -->
+          <div id="keys-onboarding" class="hidden" style="background:var(--accent-bg, rgba(88,166,255,0.08));border:1px solid var(--accent, #58a6ff);border-radius:8px;padding:16px 20px;margin-bottom:20px">
+            <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:6px">Welcome to Conduit</div>
+            <div style="font-size:13px;color:var(--text-secondary);line-height:1.5">
+              Generate an API key below, then click <strong>"Use This Key"</strong> to connect. Once connected, you'll have access to the Knowledge Graph, Topology, Import, and Ask views.
+            </div>
+          </div>
+
+          <!-- Active key indicator -->
+          <div id="keys-active-banner" class="hidden" style="background:var(--bg-success, rgba(46,160,67,0.1));border:1px solid var(--border-success, #2ea043);border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:16px">&#9889;</span>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text-primary)">Connected</div>
+              <div style="font-size:12px;color:var(--text-secondary)" id="keys-active-prefix"></div>
+            </div>
+          </div>
+
+          <!-- Create key -->
+          <div style="background:var(--bg-primary);border:1px solid var(--border-default);border-radius:10px;padding:20px;margin-bottom:20px">
+            <h3 style="font-size:14px;font-weight:600;margin:0 0 12px">Create New Key</h3>
+            <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+              <div style="flex:1;min-width:160px">
+                <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Key Type</label>
+                <select id="new-key-type" style="width:100%;padding:8px 12px;font-size:13px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary)">
+                  <option value="api">API Key</option>
+                  <option value="admin">Admin Key</option>
+                </select>
+              </div>
+              <div style="flex:1;min-width:160px">
+                <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Scope</label>
+                <select id="new-key-scope" style="width:100%;padding:8px 12px;font-size:13px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary)">
+                  <option value="read">Read — query &amp; search only</option>
+                  <option value="write">Write — read + ingest, extract, sync</option>
+                  <option value="admin">Admin — full access</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" onclick="createConsoleKey()" style="white-space:nowrap">Generate Key</button>
+            </div>
+
+            <!-- Newly created key (shown once) -->
+            <div id="new-key-result" class="hidden" style="margin-top:16px;background:var(--bg-base);border:1px solid var(--accent);border-radius:8px;padding:16px">
+              <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">&#9888; Save this key now — it won't be shown again</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="text" id="new-key-plaintext" readonly style="flex:1;padding:8px 12px;font-size:13px;font-family:monospace;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary)" />
+                <button class="btn btn-secondary btn-sm" onclick="copyNewKey()">Copy</button>
+                <button class="btn btn-primary btn-sm" onclick="useNewKey()">Use This Key</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Key list -->
+          <div style="background:var(--bg-primary);border:1px solid var(--border-default);border-radius:10px;overflow:hidden">
+            <div style="padding:14px 20px;border-bottom:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center">
+              <h3 style="font-size:14px;font-weight:600;margin:0">Your Keys</h3>
+              <span id="keys-count" style="font-size:12px;color:var(--text-tertiary)"></span>
+            </div>
+            <div id="keys-list" style="padding:0"></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="edit-modal" class="hidden" style="position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)">
+    <div style="background:var(--bg-primary);border:1px solid var(--border-default);border-radius:16px;width:90%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between">
+        <h3 id="edit-modal-title" style="font-size:16px;font-weight:600;color:var(--text-primary);margin:0">Edit Zettel</h3>
+        <button onclick="closeEditModal()" style="background:none;border:none;color:var(--text-tertiary);font-size:20px;cursor:pointer;padding:4px">&times;</button>
+      </div>
+      <div style="padding:20px;overflow-y:auto;flex:1">
+        <input type="hidden" id="edit-zettel-id" />
+        <label style="font-size:12px;color:var(--text-secondary);font-weight:500;display:block;margin-bottom:4px">Title</label>
+        <input type="text" id="edit-title" style="width:100%;padding:8px 12px;font-size:14px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-family:inherit;margin-bottom:14px;box-sizing:border-box" />
+        <label style="font-size:12px;color:var(--text-secondary);font-weight:500;display:block;margin-bottom:4px">Content</label>
+        <textarea id="edit-content" rows="14" style="width:100%;padding:10px 12px;font-size:13px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-family:inherit;line-height:1.6;resize:vertical;box-sizing:border-box"></textarea>
+        <label style="font-size:12px;color:var(--text-secondary);font-weight:500;display:block;margin-bottom:4px;margin-top:14px">Source Provenance</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <select id="edit-prov-type" onchange="updateProvenanceFields()" style="padding:8px 10px;font-size:13px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-family:inherit">
+            <option value="">None</option>
+            <option value="url">URL</option>
+            <option value="pdf">PDF</option>
+            <option value="database">Database</option>
+            <option value="file">File</option>
+            <option value="api">API</option>
+          </select>
+          <input type="text" id="edit-prov-title" placeholder="Source title (optional)" style="flex:1;padding:8px 12px;font-size:13px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-family:inherit;box-sizing:border-box" />
+        </div>
+        <div id="prov-fields-url" class="hidden" style="display:flex;gap:8px;margin-bottom:6px">
+          <input type="url" id="edit-prov-url" placeholder="https://..." style="flex:1;padding:8px 12px;font-size:13px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-family:inherit;box-sizing:border-box" />
+        </div>
+        <div id="prov-fields-pdf" class="hidden" style="display:flex;gap:8px;margin-bottom:6px">
+          <input type="url" id="edit-prov-pdf-url" placeholder="PDF URL or path" style="flex:1;padding:8px 12px;font-size:13px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-family:inherit;box-sizing:border-box" />
+          <input type="text" id="edit-prov-page" placeholder="Page(s)" style="width:100px;padding:8px 12px;font-size:13px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-family:inherit;box-sizing:border-box" />
+        </div>
+        <div id="prov-fields-database" class="hidden" style="display:flex;gap:8px;margin-bottom:6px">
+          <input type="text" id="edit-prov-table" placeholder="Table name" style="width:160px;padding:8px 12px;font-size:13px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-family:inherit;box-sizing:border-box" />
+          <input type="text" id="edit-prov-query" placeholder="SQL query" style="flex:1;padding:8px 12px;font-size:13px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-family:inherit;box-sizing:border-box" />
+        </div>
+        <div id="prov-fields-file" class="hidden" style="display:flex;gap:8px;margin-bottom:6px">
+          <input type="text" id="edit-prov-path" placeholder="/path/to/file" style="flex:1;padding:8px 12px;font-size:13px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-family:inherit;box-sizing:border-box" />
+        </div>
+        <div id="prov-fields-api" class="hidden" style="display:flex;gap:8px;margin-bottom:6px">
+          <input type="text" id="edit-prov-endpoint" placeholder="GET /api/v1/..." style="flex:1;padding:8px 12px;font-size:13px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-family:inherit;box-sizing:border-box" />
+        </div>
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center">
+        <button onclick="deleteZettel()" id="edit-delete-btn" style="padding:8px 14px;background:none;border:1px solid var(--danger);border-radius:8px;color:var(--danger);font-size:12px;cursor:pointer">Delete</button>
+        <div style="display:flex;gap:8px">
+          <button onclick="closeEditModal()" style="padding:8px 16px;background:none;border:1px solid var(--border-default);border-radius:8px;color:var(--text-secondary);font-size:13px;cursor:pointer">Cancel</button>
+          <button onclick="saveZettel()" id="edit-save-btn" style="padding:8px 20px;background:var(--accent);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─── State ──────────────────────────────────────────────────────
+    const API = window.location.origin;
+    let apiKey = localStorage.getItem('conduit_api_key') || '';
+    let currentView = 'knowledge';
+    let graphStats = null;
+    let currentKaiId = localStorage.getItem('conduit_kai_id') || '';
+    let kaiList = [];
+
+    // Check auth mode and auto-connect
+    (async function checkAuth() {
+      // Check if user is logged in via Cognito (cookie-based)
+      try {
+        const meResp = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
+        if (meResp.ok) {
+          cognitoSession = true;
+          document.getElementById('nav-keys').style.display = '';
+
+          // Cookie auth: GraphQL now accepts cookies, no API key needed
+          document.getElementById('auth-wall').classList.add('hidden');
+          document.getElementById('app-main').classList.remove('hidden');
+
+          // Load stats directly via cookie auth
+          try {
+            const resp = await fetch(`${API}/graphql`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ query: '{ stats { totalZettels totalChunks totalRelationships domainBreakdown { domain zettelCount topTopics { topic count } } } }' }),
+            });
+            const data = await resp.json();
+            if (data.data && data.data.stats) {
+              graphStats = data.data.stats;
+              loadDashboard();
+              loadKais();
+              return;
+            }
+          } catch (e) {}
+
+          // Stats failed — still show app, user can browse
+          switchView('knowledge');
+          loadKais();
+          return;
+        }
+      } catch (e) { /* Cognito not configured or not logged in */ }
+
+      // Check if Cognito is enabled
+      try {
+        const cfgResp = await fetch('/api/v1/auth/config');
+        if (cfgResp.ok) {
+          const cfg = await cfgResp.json();
+          if (cfg.cognitoEnabled) {
+            document.getElementById('auth-cognito').classList.remove('hidden');
+            document.getElementById('auth-legacy').classList.add('hidden');
+          }
+        }
+      } catch (e) { /* Config endpoint not available */ }
+
+      // Try auto-connect with stored key
+      if (apiKey) {
+        document.getElementById('api-key-input').value = apiKey;
+        connect();
+      }
+    })();
+
+    // ─── Auth ───────────────────────────────────────────────────────
+    function headers() {
+      const h = { 'Content-Type': 'application/json' };
+      if (apiKey) h['Authorization'] = `Bearer ${apiKey}`;
+      if (currentKaiId) h['X-Kai-Id'] = currentKaiId;
+      return h;
+    }
+
+    // Fetch wrapper that always includes credentials for cookie auth
+    function authFetch(url, opts = {}) {
+      opts.credentials = 'include';
+      if (!opts.headers) opts.headers = headers();
+      return fetch(url, opts);
+    }
+
+    function showAuthError(msg) {
+      const el = document.getElementById('auth-error');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function hideAuthError() {
+      document.getElementById('auth-error').classList.add('hidden');
+    }
+
+    function showAuthTab(tab) {
+      hideAuthError();
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.auth-tabs .auth-tab').forEach(t => {
+        if ((tab === 'connect' && t.textContent === 'Connect') ||
+            (tab === 'signup' && t.textContent === 'Sign Up')) {
+          t.classList.add('active');
+        }
+      });
+      document.getElementById('tab-connect').classList.toggle('hidden', tab !== 'connect');
+      document.getElementById('tab-signup').classList.toggle('hidden', tab !== 'signup');
+      document.getElementById('tab-signup-success').classList.add('hidden');
+    }
+
+    function connectFromCognito() {
+      const key = document.getElementById('api-key-input-cognito').value.trim();
+      if (!key) return;
+      document.getElementById('api-key-input').value = key;
+      connect();
+    }
+
+    async function connect() {
+      hideAuthError();
+      const keyInput = document.getElementById('api-key-input');
+      const key = keyInput ? keyInput.value.trim() : '';
+      if (!key) return showAuthError('Enter an API key');
+
+      try {
+        // Validate key by querying stats
+        const resp = await fetch(`${API}/graphql`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: '{ stats { totalZettels totalChunks totalRelationships domainBreakdown { domain zettelCount topTopics { topic count } } } }' }),
+        });
+
+        const data = await resp.json();
+        if (data.errors) {
+          showAuthError('Invalid API key');
+          return;
+        }
+
+        apiKey = key;
+        localStorage.setItem('conduit_api_key', key);
+        graphStats = data.data.stats;
+
+        document.getElementById('auth-wall').classList.add('hidden');
+        document.getElementById('app-main').classList.remove('hidden');
+        loadDashboard();
+      } catch (e) {
+        showAuthError('Could not connect: ' + e.message);
+      }
+    }
+
+    async function signup() {
+      hideAuthError();
+      const org = document.getElementById('signup-org').value.trim();
+      const email = document.getElementById('signup-email').value.trim();
+      if (!org || !email) return showAuthError('Fill in all fields');
+
+      try {
+        const resp = await fetch(`${API}/api/v1/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ organizationName: org, email }),
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) {
+          showAuthError(data.error || 'Signup failed');
+          return;
+        }
+
+        document.getElementById('signup-api-key').value = data.apiKey;
+        document.getElementById('signup-admin-key').value = data.adminKey;
+        document.getElementById('tab-signup').classList.add('hidden');
+        document.getElementById('tab-signup-success').classList.remove('hidden');
+      } catch (e) {
+        showAuthError('Signup failed: ' + e.message);
+      }
+    }
+
+    function connectWithNewKey() {
+      const key = document.getElementById('signup-api-key').value;
+      document.getElementById('api-key-input').value = key;
+      connect();
+    }
+
+    async function disconnect() {
+      apiKey = '';
+      currentKaiId = '';
+      localStorage.removeItem('conduit_api_key');
+      localStorage.removeItem('conduit_kai_id');
+      // Clear Cognito cookies
+      try { await fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
+      document.getElementById('app-main').classList.add('hidden');
+      document.getElementById('auth-wall').classList.remove('hidden');
+      document.getElementById('kai-switcher').style.display = 'none';
+      showAuthTab('connect');
+      const keyInput = document.getElementById('api-key-input');
+      if (keyInput) keyInput.value = '';
+    }
+
+    // ─── Console Key Management ─────────────────────────────────────
+    let cognitoSession = false;
+
+    async function loadConsoleKeys() {
+      try {
+        const resp = await fetch('/api/v1/console/keys', { credentials: 'same-origin' });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const keys = data.keys || [];
+        const list = document.getElementById('keys-list');
+        const count = document.getElementById('keys-count');
+        count.textContent = `${keys.filter(k => k.is_active).length} active`;
+
+        // Show active key banner or onboarding
+        const banner = document.getElementById('keys-active-banner');
+        const prefixEl = document.getElementById('keys-active-prefix');
+        const onboarding = document.getElementById('keys-onboarding');
+        if (apiKey) {
+          banner.classList.remove('hidden');
+          banner.style.display = 'flex';
+          prefixEl.textContent = `Using key: ${apiKey.substring(0, 12)}...`;
+          onboarding.classList.add('hidden');
+        } else {
+          banner.classList.add('hidden');
+          banner.style.display = 'none';
+          onboarding.classList.remove('hidden');
+          onboarding.style.display = 'block';
+        }
+
+        if (keys.length === 0) {
+          list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-tertiary);font-size:13px">No keys yet. Create one above to get started.</div>';
+          return;
+        }
+
+        list.innerHTML = keys.map(k => `
+          <div style="padding:12px 20px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;gap:12px${!k.is_active ? ';opacity:0.5' : ''}">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px">
+                <code style="font-size:13px;color:var(--text-primary)">${k.key_prefix}...</code>
+                <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${k.key_type === 'admin' ? 'var(--accent)' : 'var(--bg-secondary)'};color:${k.key_type === 'admin' ? 'white' : 'var(--text-secondary)'}">${k.key_type}</span>
+                <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:var(--bg-secondary);color:var(--text-tertiary)">${k.scope || 'admin'}</span>
+                ${!k.is_active ? '<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:var(--danger);color:white">revoked</span>' : ''}
+              </div>
+              <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">
+                Created ${new Date(k.created_at).toLocaleDateString()}
+                ${k.last_used_at ? ' &middot; Last used ' + new Date(k.last_used_at).toLocaleDateString() : ''}
+              </div>
+            </div>
+            ${k.is_active ? `<button onclick="revokeConsoleKey('${k.id}')" style="padding:4px 12px;font-size:12px;background:none;border:1px solid var(--danger);border-radius:6px;color:var(--danger);cursor:pointer">Revoke</button>` : ''}
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('Failed to load keys', e);
+      }
+    }
+
+    async function createConsoleKey() {
+      const keyType = document.getElementById('new-key-type').value;
+      const scope = document.getElementById('new-key-scope').value;
+      try {
+        const resp = await fetch('/api/v1/console/keys', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ keyType, scope }),
+        });
+        if (!resp.ok) throw new Error('Failed to create key');
+        const data = await resp.json();
+        document.getElementById('new-key-plaintext').value = data.plaintext;
+        document.getElementById('new-key-result').classList.remove('hidden');
+        loadConsoleKeys();
+      } catch (e) {
+        alert('Failed to create key: ' + e.message);
+      }
+    }
+
+    function copyNewKey() {
+      const input = document.getElementById('new-key-plaintext');
+      navigator.clipboard.writeText(input.value);
+    }
+
+    async function useNewKey() {
+      const key = document.getElementById('new-key-plaintext').value;
+      if (!key) return;
+      apiKey = key;
+      localStorage.setItem('conduit_api_key', key);
+      document.getElementById('new-key-result').classList.add('hidden');
+      // Validate and load dashboard
+      try {
+        const resp = await fetch(`${API}/graphql`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: '{ stats { totalZettels totalChunks totalRelationships domainBreakdown { domain zettelCount topTopics { topic count } } } }' }),
+        });
+        const data = await resp.json();
+        if (data.data && data.data.stats) {
+          graphStats = data.data.stats;
+          loadDashboard();
+          switchView('knowledge');
+        } else {
+          apiKey = '';
+          localStorage.removeItem('conduit_api_key');
+          alert('Key validation failed. Please try again.');
+        }
+      } catch (e) {
+        apiKey = '';
+        localStorage.removeItem('conduit_api_key');
+        alert('Key validation failed: ' + e.message);
+      }
+    }
+
+    async function revokeConsoleKey(keyId) {
+      if (!confirm('Revoke this key? This cannot be undone.')) return;
+      try {
+        const resp = await fetch(`/api/v1/console/keys/${keyId}`, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        });
+        if (!resp.ok) throw new Error('Failed to revoke key');
+        loadConsoleKeys();
+      } catch (e) {
+        alert('Failed to revoke key: ' + e.message);
+      }
+    }
+
+    // ─── Dashboard ──────────────────────────────────────────────────
+    async function loadDashboard() {
+      updateSidebarStats();
+      renderStats();
+      renderDomains();
+      loadAllKnowledge();
+    }
+
+    function updateSidebarStats() {
+      if (!graphStats) return;
+      document.getElementById('sidebar-zettels').textContent = graphStats.totalZettels;
+      document.getElementById('sidebar-chunks').textContent = graphStats.totalChunks;
+      document.getElementById('sidebar-domains').textContent = graphStats.domainBreakdown.length;
+    }
+
+    function renderStats() {
+      if (!graphStats) return;
+      const s = graphStats;
+      document.getElementById('stats-row').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-value accent">${s.totalZettels}</div>
+          <div class="stat-label">Knowledge Units</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value violet">${s.totalChunks}</div>
+          <div class="stat-label">Vector Chunks</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value emerald">${s.totalRelationships}</div>
+          <div class="stat-label">Relationships</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value amber">${s.domainBreakdown.length}</div>
+          <div class="stat-label">Domains</div>
+        </div>
+      `;
+    }
+
+    function renderDomains() {
+      if (!graphStats || graphStats.domainBreakdown.length === 0) {
+        document.getElementById('domain-section').innerHTML = '';
+        return;
+      }
+
+      const cards = graphStats.domainBreakdown
+        .sort((a, b) => b.zettelCount - a.zettelCount)
+        .map(d => `
+          <div class="domain-card" style="cursor:pointer" onclick="filterByDomain('${escapeHtml(d.domain)}')">
+            <div class="domain-name">${escapeHtml(d.domain)}</div>
+            <div class="domain-count">${d.zettelCount}</div>
+            <div class="domain-topics">${d.topTopics ? d.topTopics.slice(0, 3).map(t => t.topic).join(', ') : ''}</div>
+          </div>
+        `).join('');
+
+      document.getElementById('domain-section').innerHTML = `
+        <div class="section-header">
+          <h3>Domains</h3>
+          <span class="count">${graphStats.domainBreakdown.length}</span>
+        </div>
+        <div class="domain-grid">${cards}</div>
+        <div style="margin-bottom:28px"></div>
+      `;
+    }
+
+    async function filterByDomain(domain) {
+      document.getElementById('knowledge-search').value = '';
+      const container = document.getElementById('knowledge-results');
+      container.innerHTML = '<div class="flex-center" style="padding:24px"><div class="spinner"></div></div>';
+      try {
+        const resp = await authFetch(`${API}/graphql`, {
+          method: 'POST',
+          body: JSON.stringify({
+            query: `query ByDomain($d: String!) { zettelsByDomain(domain: $d, limit: 50) { id title summary content domains topics knowledgeType } }`,
+            variables: { d: domain },
+          }),
+        });
+        const data = await resp.json();
+        const zettels = data.data?.zettelsByDomain || [];
+        if (zettels.length === 0) {
+          container.innerHTML = `<div class="empty-state"><div class="icon">&#128269;</div><p>No zettels in domain "${escapeHtml(domain)}".</p></div>`;
+          return;
+        }
+        // Convert to search-result-like shape for renderSearchResult
+        const results = zettels.map(z => ({
+          zettelId: z.id, zettelTitle: z.title, content: z.summary || z.content?.slice(0, 200) || '',
+          metadata: { domains: z.domains, topics: z.topics },
+        }));
+        container.innerHTML = `
+          <div class="section-header">
+            <h3>${escapeHtml(domain)}</h3>
+            <span class="count">${results.length} zettels</span>
+            <button class="btn btn-ghost btn-sm" onclick="loadAllKnowledge()" style="margin-left:8px;font-size:11px">Clear filter</button>
+          </div>
+          <div class="card-list">${results.map(renderSearchResult).join('')}</div>
+        `;
+      } catch (e) {
+        container.innerHTML = `<div class="auth-error">${e.message}</div>`;
+      }
+    }
+
+    // ─── Knowledge Search ───────────────────────────────────────────
+    async function searchKnowledge() {
+      const query = document.getElementById('knowledge-search').value.trim();
+      if (!query) return loadAllKnowledge();
+
+      const container = document.getElementById('knowledge-results');
+      container.innerHTML = '<div class="flex-center" style="padding:24px"><div class="spinner"></div></div>';
+
+      try {
+        const resp = await authFetch(`${API}/graphql`, {
+          method: 'POST',
+          body: JSON.stringify({
+            query: `query Search($q: String!) {
+              semanticSearch(query: $q, limit: 20) {
+                score zettelId zettelTitle section content chunkIndex
+                metadata { domains topics }
+              }
+            }`,
+            variables: { q: query },
+          }),
+        });
+
+        const data = await resp.json();
+        const results = data.data?.semanticSearch || [];
+
+        if (results.length === 0) {
+          container.innerHTML = '<div class="empty-state"><div class="icon">&#128269;</div><p>No results found. Try different keywords.</p></div>';
+          return;
+        }
+
+        container.innerHTML = `
+          <div class="section-header">
+            <h3>Search Results</h3>
+            <span class="count">${results.length} matches</span>
+          </div>
+          <div class="card-list">${results.map(renderSearchResult).join('')}</div>
+        `;
+      } catch (e) {
+        container.innerHTML = `<div class="auth-error">${e.message}</div>`;
+      }
+    }
+
+    async function loadAllKnowledge() {
+      const container = document.getElementById('knowledge-results');
+      container.innerHTML = '<div class="flex-center" style="padding:24px"><div class="spinner"></div></div>';
+
+      try {
+        const domains = graphStats?.domainBreakdown || [];
+        if (domains.length === 0) {
+          container.innerHTML = '<div class="empty-state"><div class="icon">&#128218;</div><p>No knowledge ingested yet. Go to Ingest to add your first content.</p></div>';
+          return;
+        }
+
+        // Fetch top zettels from each domain in parallel
+        const topDomains = domains.slice(0, 8);
+        const fetches = topDomains.map(d =>
+          authFetch(`${API}/graphql`, {
+            method: 'POST',
+            body: JSON.stringify({
+              query: `query ByDomain($d: String!) { zettelsByDomain(domain: $d, limit: 10) { id title summary domains topics knowledgeType } }`,
+              variables: { d: d.domain },
+            }),
+          }).then(r => r.json()).then(data => ({
+            domain: d.domain,
+            count: d.zettelCount,
+            zettels: data.data?.zettelsByDomain || [],
+          }))
+        );
+
+        const domainResults = await Promise.all(fetches);
+
+        let html = '';
+        for (const dr of domainResults) {
+          if (dr.zettels.length === 0) continue;
+          const results = dr.zettels.map(z => ({
+            zettelId: z.id, zettelTitle: z.title, content: z.summary || '',
+            metadata: { domains: z.domains, topics: z.topics },
+          }));
+          html += `
+            <div class="section-header" style="margin-top:16px">
+              <h3 style="cursor:pointer" onclick="filterByDomain('${escapeHtml(dr.domain)}')">${escapeHtml(dr.domain)}</h3>
+              <span class="count">${dr.count} total</span>
+            </div>
+            <div class="card-list">${results.map(renderSearchResult).join('')}</div>
+          `;
+        }
+
+        container.innerHTML = html || '<div class="empty-state"><div class="icon">&#128218;</div><p>No knowledge found.</p></div>';
+      } catch (e) {
+        container.innerHTML = `<div class="auth-error">${e.message}</div>`;
+      }
+    }
+
+    function renderSearchResult(r) {
+      const domains = (r.metadata?.domains || []).map(d =>
+        `<span class="badge badge-domain">${escapeHtml(d)}</span>`
+      ).join('');
+
+      const topics = (r.metadata?.topics || []).slice(0, 2).map(t =>
+        `<span class="badge badge-type">${escapeHtml(t)}</span>`
+      ).join('');
+
+      const score = r.score
+        ? `<span class="score">${(r.score * 100).toFixed(1)}%</span>`
+        : '';
+
+      const provBadge = formatProvenanceBadge(r.metadata?.provenance, r.metadata?.sourceUrl);
+
+      return `
+        <div class="knowledge-card" style="cursor:pointer" onclick="openEditModal('${escapeHtml(r.zettelId)}','${escapeHtml(r.zettelTitle)}')">
+          <div class="title">${escapeHtml(r.zettelTitle)}</div>
+          <div class="content">${escapeHtml(r.content)}</div>
+          <div class="meta" onclick="event.stopPropagation()">
+            ${domains}${topics}${provBadge}${score}
+          </div>
+        </div>
+      `;
+    }
+
+    // ─── Navigation ─────────────────────────────────────────────────
+    function switchView(view) {
+      currentView = view;
+      document.querySelectorAll('.nav-item').forEach(n => {
+        n.classList.toggle('active', n.dataset.view === view);
+      });
+      ['knowledge', 'ingest', 'ask', 'graph', 'keys'].forEach(v => {
+        const el = document.getElementById('view-' + v);
+        if (!el) return;
+        if (v === view) {
+          el.classList.remove('hidden');
+          el.style.display = (v === 'graph' || v === 'ask') ? 'flex' : 'block';
+        } else {
+          el.style.display = 'none';
+          el.classList.add('hidden');
+        }
+      });
+
+      if (view === 'knowledge' && graphStats) renderStats();
+      if (view === 'ask') document.getElementById('ask-input').focus();
+      if (view === 'graph') graphRenderer.init();
+      if (view === 'keys') loadConsoleKeys();
+    }
+
+    // ─── Ingest ─────────────────────────────────────────────────────
+    function switchIngestMode(mode) {
+      document.querySelectorAll('.ingest-mode').forEach(m => m.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('ingest-url').classList.toggle('hidden', mode !== 'url');
+      document.getElementById('ingest-text').classList.toggle('hidden', mode !== 'text');
+      document.getElementById('ingest-connector').classList.toggle('hidden', mode !== 'connector');
+      // Clear results when switching modes
+      document.getElementById('ingest-results').innerHTML = '';
+    }
+
+    async function ingestURL(dryRun) {
+      const url = document.getElementById('ingest-url-input').value.trim();
+      if (!url) return;
+
+      const domains = document.getElementById('ingest-url-domains').value
+        .split(',').map(s => s.trim()).filter(Boolean);
+      const maxUnits = parseInt(document.getElementById('ingest-url-max').value) || 10;
+
+      document.getElementById('ingest-loading').classList.remove('hidden');
+      document.getElementById('ingest-loading-text').textContent = 'Extracting knowledge units via LLM...';
+      document.getElementById('ingest-results').innerHTML = '';
+
+      try {
+        // First, fetch the content via a proxy approach:
+        // We'll call the extract endpoint directly with a fetch-first approach
+        // For URLs, we need Anthology. Since we're a web UI, call extract with fetched content.
+        // Actually, let's use a simple fetch through the browser for same-origin or CORS-enabled URLs
+        let text = '';
+        let title = url;
+
+        try {
+          const fetchResp = await fetch(url);
+          const html = await fetchResp.text();
+          // Basic HTML to text extraction
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          // Remove noise
+          doc.querySelectorAll('script,style,nav,footer,header,.nav,.footer,.header,aside').forEach(el => el.remove());
+          title = doc.title || url;
+          text = (doc.body?.innerText || '').replace(/\s+/g, ' ').trim();
+        } catch (fetchErr) {
+          // CORS blocked - inform user
+          document.getElementById('ingest-loading').classList.add('hidden');
+          document.getElementById('ingest-results').innerHTML = `
+            <div class="auth-error">
+              Cannot fetch URL from browser (CORS). Use the Ingest > Text mode, or use the Anthology MCP tools / CLI for URL ingestion.
+            </div>`;
+          return;
+        }
+
+        if (text.length < 100) {
+          document.getElementById('ingest-loading').classList.add('hidden');
+          document.getElementById('ingest-results').innerHTML = `
+            <div class="auth-error">Content too short (${text.length} chars). Minimum 100 characters required.</div>`;
+          return;
+        }
+
+        // Truncate to 200k
+        if (text.length > 200000) text = text.substring(0, 200000);
+
+        const resp = await authFetch(`${API}/api/v1/extract`, {
+          method: 'POST',
+          body: JSON.stringify({
+            text,
+            contextSource: 'documentation',
+            domainHints: domains.length ? domains : undefined,
+            maxUnits,
+            dryRun,
+          }),
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) {
+          throw new Error(data.error || `HTTP ${resp.status}`);
+        }
+
+        document.getElementById('ingest-loading').classList.add('hidden');
+        renderIngestResults(data, dryRun, title, text.length);
+        refreshStats();
+      } catch (e) {
+        document.getElementById('ingest-loading').classList.add('hidden');
+        document.getElementById('ingest-results').innerHTML = `<div class="auth-error">${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    async function ingestText(dryRun) {
+      const text = document.getElementById('ingest-text-input').value.trim();
+      if (!text || text.length < 100) {
+        document.getElementById('ingest-results').innerHTML = `
+          <div class="auth-error">Content must be at least 100 characters. Current: ${text.length}</div>`;
+        return;
+      }
+
+      const contextSource = document.getElementById('ingest-text-source').value;
+      const domains = document.getElementById('ingest-text-domains').value
+        .split(',').map(s => s.trim()).filter(Boolean);
+      const maxUnits = parseInt(document.getElementById('ingest-text-max').value) || 10;
+
+      document.getElementById('ingest-loading').classList.remove('hidden');
+      document.getElementById('ingest-loading-text').textContent = 'Extracting knowledge units via LLM...';
+      document.getElementById('ingest-results').innerHTML = '';
+
+      try {
+        const resp = await authFetch(`${API}/api/v1/extract`, {
+          method: 'POST',
+          body: JSON.stringify({
+            text: text.substring(0, 200000),
+            contextSource,
+            domainHints: domains.length ? domains : undefined,
+            maxUnits,
+            dryRun,
+          }),
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+
+        document.getElementById('ingest-loading').classList.add('hidden');
+        renderIngestResults(data, dryRun, 'Text Input', text.length);
+        refreshStats();
+      } catch (e) {
+        document.getElementById('ingest-loading').classList.add('hidden');
+        document.getElementById('ingest-results').innerHTML = `<div class="auth-error">${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function renderIngestResults(data, dryRun, source, chars) {
+      const units = data.units || [];
+      const container = document.getElementById('ingest-results');
+
+      const statusBadge = dryRun
+        ? '<span class="badge badge-warning">DRY RUN</span>'
+        : '<span class="badge badge-success">PERSISTED</span>';
+
+      const unitCards = units.map(u => {
+        const dupBadge = u.isDuplicate
+          ? '<span class="badge badge-warning">DUPLICATE</span>'
+          : '<span class="badge badge-success">NOVEL</span>';
+
+        const domains = (u.domains || []).map(d =>
+          `<span class="badge badge-domain">${escapeHtml(d)}</span>`
+        ).join('');
+
+        return `
+          <div class="knowledge-card">
+            <div class="title">${escapeHtml(u.title)}</div>
+            <div class="meta">
+              ${dupBadge}
+              <span class="badge badge-type">${u.knowledgeType || '?'}</span>
+              ${domains}
+              ${u.similarityScore ? `<span class="score">${(u.similarityScore * 100).toFixed(1)}% similar</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="result-summary">
+          <div class="result-stats">
+            <span class="result-stat"><span class="n">${data.extracted || 0}</span> extracted</span>
+            <span class="result-stat"><span class="n novel">${data.novel || 0}</span> novel</span>
+            <span class="result-stat"><span class="n dup">${data.duplicates || 0}</span> duplicates</span>
+            <span class="result-stat"><span class="n disc">${data.discarded || 0}</span> discarded</span>
+            ${statusBadge}
+          </div>
+          <div class="summary-text">${escapeHtml(data.summary || '')}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px">
+            Source: ${escapeHtml(source)} (${chars.toLocaleString()} chars)
+          </div>
+        </div>
+        ${unitCards ? `
+          <div class="section-header mt-16">
+            <h3>Extracted Units</h3>
+            <span class="count">${units.length}</span>
+          </div>
+          <div class="card-list">${unitCards}</div>
+        ` : ''}
+      `;
+    }
+
+    // ─── Sources View ─────────────────────────────────────────────────
+
+    // Cursor storage for incremental syncs
+    const sourceCursors = JSON.parse(localStorage.getItem('conduit_source_cursors') || '{}');
+
+    function saveCursors() {
+      localStorage.setItem('conduit_source_cursors', JSON.stringify(sourceCursors));
+    }
+
+    function getSourceConfig() {
+      const type = document.getElementById('source-type').value;
+      const name = document.getElementById('source-name').value.trim();
+      const domains = document.getElementById('source-domains').value
+        .split(',').map(s => s.trim()).filter(Boolean);
+
+      const settings = {};
+      let include = [];
+      let exclude = [];
+
+      if (type === 'filesystem') {
+        settings.path = document.getElementById('source-path').value.trim();
+        include = document.getElementById('source-include').value
+          .split(',').map(s => s.trim()).filter(Boolean);
+        exclude = document.getElementById('source-exclude').value
+          .split(',').map(s => s.trim()).filter(Boolean);
+      } else if (type === 'github') {
+        settings.owner = document.getElementById('github-owner').value.trim();
+        settings.repo = document.getElementById('github-repo').value.trim();
+        settings.token = document.getElementById('github-token').value.trim();
+        const branch = document.getElementById('github-branch').value.trim();
+        if (branch) settings.branch = branch;
+        include = document.getElementById('github-include').value
+          .split(',').map(s => s.trim()).filter(Boolean);
+        exclude = document.getElementById('github-exclude').value
+          .split(',').map(s => s.trim()).filter(Boolean);
+      } else if (type === 'postgresql') {
+        settings.connectionString = document.getElementById('pg-connection').value.trim();
+        settings.query = document.getElementById('pg-query').value.trim();
+        const contentRaw = document.getElementById('pg-col-content').value.trim();
+        const contentCols = contentRaw.includes(',')
+          ? contentRaw.split(',').map(s => s.trim()).filter(Boolean)
+          : contentRaw;
+        settings.columns = {
+          id: document.getElementById('pg-col-id').value.trim() || 'id',
+          title: document.getElementById('pg-col-title').value.trim() || 'title',
+          content: contentCols || 'content',
+        };
+        const modCol = document.getElementById('pg-col-modified').value.trim();
+        if (modCol) settings.columns.modifiedAt = modCol;
+      }
+
+      return {
+        connector: {
+          type,
+          name: name || 'default',
+          settings,
+          domainHints: domains.length > 0 ? domains : undefined,
+          includePatterns: include.length > 0 ? include : undefined,
+          excludePatterns: exclude.length > 0 ? exclude : undefined,
+        }
+      };
+    }
+
+    function onSourceTypeChange() {
+      const type = document.getElementById('source-type').value;
+      document.getElementById('source-settings-filesystem').classList.toggle('hidden', type !== 'filesystem');
+      document.getElementById('source-settings-github').classList.toggle('hidden', type !== 'github');
+      document.getElementById('source-settings-postgresql').classList.toggle('hidden', type !== 'postgresql');
+    }
+
+    function validateSourceConfig(config) {
+      const t = config.connector.type;
+      if (t === 'filesystem' && !config.connector.settings.path) return 'Please enter a directory path';
+      if (t === 'github') {
+        if (!config.connector.settings.owner || !config.connector.settings.repo) return 'Please enter owner and repository';
+        if (!config.connector.settings.token) return 'Please enter a GitHub token (PAT)';
+      }
+      if (t === 'postgresql') {
+        if (!config.connector.settings.connectionString) return 'Please enter a connection string';
+        if (!config.connector.settings.query) return 'Please enter a SQL query';
+      }
+      return null;
+    }
+
+    async function discoverSource() {
+      const config = getSourceConfig();
+      const err = validateSourceConfig(config);
+      if (err) {
+        document.getElementById('ingest-results').innerHTML =
+          `<div class="auth-error">${err}</div>`;
+        return;
+      }
+
+      document.getElementById('ingest-loading').classList.remove('hidden');
+      document.getElementById('ingest-loading-text').textContent = 'Discovering files...';
+      document.getElementById('ingest-results').innerHTML = '';
+
+      try {
+        const res = await authFetch(API + '/connectors/discover', {
+          method: 'POST',
+          body: JSON.stringify(config),
+        });
+        document.getElementById('ingest-loading').classList.add('hidden');
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          document.getElementById('ingest-results').innerHTML =
+            `<div class="auth-error">${escapeHtml(err.error || 'Discovery failed')}</div>`;
+          return;
+        }
+
+        const data = await res.json();
+        renderDiscoverResults(data);
+      } catch (e) {
+        document.getElementById('ingest-loading').classList.add('hidden');
+        document.getElementById('ingest-results').innerHTML =
+          `<div class="auth-error">${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function renderDiscoverResults(data) {
+      const items = data.items || [];
+      const container = document.getElementById('ingest-results');
+
+      const fileRows = items.map(item => {
+        const size = item.sizeBytes
+          ? (item.sizeBytes < 1024 ? item.sizeBytes + ' B'
+            : item.sizeBytes < 1048576 ? (item.sizeBytes / 1024).toFixed(1) + ' KB'
+            : (item.sizeBytes / 1048576).toFixed(1) + ' MB')
+          : '-';
+        const ext = item.sourceId.split('.').pop() || '?';
+        const modified = new Date(item.modifiedAt).toLocaleDateString();
+
+        return `<div class="knowledge-card" style="padding:10px 14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <span class="badge badge-type" style="margin-right:8px">${escapeHtml(ext.toUpperCase())}</span>
+              <span style="font-size:13px">${escapeHtml(item.sourceId)}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-tertiary)">
+              ${size} &middot; ${modified}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="section-header mt-16">
+          <h3>Files Found</h3>
+          <span class="count">${items.length}</span>
+        </div>
+        <div class="card-list">${fileRows || '<p class="text-sm text-muted" style="padding:12px">No supported files found</p>'}</div>
+      `;
+    }
+
+    async function syncSource() {
+      const config = getSourceConfig();
+      const err = validateSourceConfig(config);
+      if (err) {
+        document.getElementById('ingest-results').innerHTML =
+          `<div class="auth-error">${err}</div>`;
+        return;
+      }
+
+      const cursorKey = config.connector.type + ':' + config.connector.name;
+      const cursor = sourceCursors[cursorKey] || undefined;
+
+      document.getElementById('ingest-loading').classList.remove('hidden');
+      document.getElementById('ingest-loading-text').textContent = cursor
+        ? 'Running incremental sync...'
+        : 'Running initial sync...';
+      document.getElementById('ingest-results').innerHTML = '';
+      document.getElementById('btn-sync').disabled = true;
+
+      try {
+        const res = await authFetch(API + '/connectors/sync', {
+          method: 'POST',
+          body: JSON.stringify({ ...config, cursor }),
+        });
+        document.getElementById('ingest-loading').classList.add('hidden');
+        document.getElementById('btn-sync').disabled = false;
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          document.getElementById('ingest-results').innerHTML =
+            `<div class="auth-error">${escapeHtml(err.error || 'Sync failed')}</div>`;
+          return;
+        }
+
+        const data = await res.json();
+
+        // Save cursor for incremental syncs
+        if (data.cursor) {
+          sourceCursors[cursorKey] = data.cursor;
+          saveCursors();
+        }
+
+        renderSyncResults(data, !!cursor);
+
+        // Refresh sidebar stats
+        if (data.summary.documentsIngested > 0) refreshStats();
+      } catch (e) {
+        document.getElementById('ingest-loading').classList.add('hidden');
+        document.getElementById('btn-sync').disabled = false;
+        document.getElementById('ingest-results').innerHTML =
+          `<div class="auth-error">${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function renderSyncResults(data, wasIncremental) {
+      const s = data.summary;
+      const stats = data.stats;
+      const container = document.getElementById('ingest-results');
+
+      const syncType = wasIncremental
+        ? '<span class="badge badge-type">INCREMENTAL</span>'
+        : '<span class="badge badge-success">INITIAL SYNC</span>';
+
+      const errorCards = (data.errors || []).map(e =>
+        `<div class="knowledge-card" style="padding:8px 14px;border-color:var(--danger)">
+          <span style="color:var(--danger);font-size:12px">${escapeHtml(e.sourceId)}: ${escapeHtml(e.error)}</span>
+        </div>`
+      ).join('');
+
+      const ingestionCards = (data.ingestion || []).map(i => {
+        const badge = i.success
+          ? '<span class="badge badge-success">OK</span>'
+          : '<span class="badge badge-warning">FAILED</span>';
+        return `<div class="knowledge-card" style="padding:10px 14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              ${badge}
+              <span style="font-size:13px;margin-left:8px">${escapeHtml(i.sourceId)}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-tertiary)">
+              ${i.success ? i.chunksCreated + ' chunks' : escapeHtml(i.error || 'error')}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="result-summary">
+          <div class="result-stats">
+            ${syncType}
+            <span class="result-stat"><span class="n">${stats.discovered}</span> discovered</span>
+            <span class="result-stat"><span class="n novel">${stats.new}</span> new</span>
+            <span class="result-stat"><span class="n">${stats.updated}</span> updated</span>
+            <span class="result-stat"><span class="n">${stats.unchanged}</span> unchanged</span>
+            <span class="result-stat"><span class="n dup">${stats.deleted}</span> deleted</span>
+            ${stats.errors ? `<span class="result-stat"><span class="n disc">${stats.errors}</span> errors</span>` : ''}
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:8px">
+            ${s.documentsIngested} documents ingested, ${s.documentsFailed} failed, ${s.documentsDeleted} removed
+          </div>
+        </div>
+        ${ingestionCards ? `
+          <div class="section-header mt-16">
+            <h3>Ingested Documents</h3>
+            <span class="count">${data.ingestion.length}</span>
+          </div>
+          <div class="card-list">${ingestionCards}</div>
+        ` : ''}
+        ${errorCards ? `
+          <div class="section-header mt-16">
+            <h3>Errors</h3>
+            <span class="count">${data.errors.length}</span>
+          </div>
+          <div class="card-list">${errorCards}</div>
+        ` : ''}
+      `;
+    }
+
+    // ─── Ask View ───────────────────────────────────────────────────
+    let askHasMessages = false;
+
+    function askFromInput() {
+      const input = document.getElementById('ask-input');
+      const query = input.value.trim();
+      if (!query) return;
+      input.value = '';
+      askQuestion(query);
+    }
+
+    async function askQuestion(query) {
+      const container = document.getElementById('ask-messages');
+      const useSwarm = document.getElementById('swarm-toggle').checked;
+
+      // Clear empty state on first message
+      if (!askHasMessages) {
+        container.innerHTML = '';
+        askHasMessages = true;
+      }
+
+      // Add user message
+      const modeBadge = useSwarm ? ' <span style="font-size:10px;background:var(--violet-bg);color:var(--violet-accent);padding:2px 6px;border-radius:4px;margin-left:6px">swarm</span>' : '';
+      container.innerHTML += `
+        <div class="message message-user">
+          <div class="bubble">${escapeHtml(query)}${modeBadge}</div>
+        </div>
+      `;
+
+      // Add loading
+      const loadingId = 'ask-loading-' + Date.now();
+      const thinkingText = useSwarm ? 'Swarm debating...' : 'Thinking...';
+      container.innerHTML += `
+        <div class="message message-system" id="${loadingId}">
+          <div class="system-label">
+            <div class="spinner" style="width:14px;height:14px;border-width:2px"></div>
+            ${thinkingText}
+          </div>
+        </div>
+      `;
+      container.scrollTop = container.scrollHeight;
+
+      try {
+        if (useSwarm) {
+          // Swarm mode: non-streaming (multi-agent debate not streamable)
+          await askNonStreaming(query, loadingId, true);
+        } else {
+          // Standard mode: SSE streaming
+          await askStreaming(query, loadingId);
+        }
+      } catch (e) {
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) {
+          loadingEl.innerHTML = `<div class="auth-error">${escapeHtml(e.message)}</div>`;
+        }
+      }
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // ─── Ask Helpers ───────────────────────────────────────────────
+
+    function buildSourceHTML(sources) {
+      if (!sources || sources.length === 0) return '';
+      return sources.slice(0, 8).map((s, idx) => {
+        const pathBadge = s.path === 'graph-edge' ? '<span class="badge" style="background:var(--violet-bg);color:var(--violet-accent);font-size:10px">graph</span>'
+          : s.path === 'graph-topic' ? '<span class="badge" style="background:var(--accent-bg);color:var(--accent-text);font-size:10px">topic</span>'
+          : '';
+        const domainBadges = (s.domains || []).map(d =>
+          `<span class="badge badge-domain">${escapeHtml(d)}</span>`
+        ).join('');
+        const sourceLink = formatProvenanceBadge(s.provenance, s.sourceUrl);
+        const contentId = `src-content-${Date.now()}-${idx}`;
+        const contentPreview = s.content ? escapeHtml(s.content.slice(0, 300)) + (s.content.length > 300 ? '...' : '') : '';
+        return `
+          <div style="background:var(--bg-hover);border-radius:8px;margin-bottom:4px;overflow:hidden">
+            <div style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:6px" onclick="document.getElementById('${contentId}').classList.toggle('hidden')">
+              <span style="font-size:10px;color:var(--text-tertiary);transition:transform 0.15s" id="${contentId}-arrow">&#x25B6;</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:500;color:var(--text-primary)">${escapeHtml(s.title)} ${pathBadge}</div>
+                <div style="font-size:11px;margin-top:2px">${domainBadges} <span style="color:var(--text-tertiary);margin-left:4px">score: ${s.score.toFixed(2)}</span></div>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center" onclick="event.stopPropagation()">
+                ${sourceLink}
+                ${s.id ? `<button onclick="openEditModal('${escapeHtml(s.id)}','${escapeHtml(s.title)}')" style="font-size:11px;color:var(--text-tertiary);background:none;border:1px solid var(--border-light);border-radius:4px;padding:2px 8px;cursor:pointer" title="Edit this zettel">edit</button>` : ''}
+              </div>
+            </div>
+            <div id="${contentId}" class="hidden" style="padding:0 12px 10px 28px;font-size:12px;color:var(--text-secondary);line-height:1.5">
+              ${contentPreview}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function buildStatsText(retrieval, sources) {
+      // Show actual matched source count, not retrieval path counts
+      if (sources && sources.length > 0) {
+        const stats = [];
+        if (retrieval.vectorSeeds) stats.push(`${retrieval.vectorSeeds} vector`);
+        if (retrieval.graphEdge) stats.push(`${retrieval.graphEdge} graph-edge`);
+        if (retrieval.graphTopic) stats.push(`${retrieval.graphTopic} graph-topic`);
+        return stats.join(' + ') + ' sources';
+      }
+      return 'no sources';
+    }
+
+    function renderAskResult(loadingEl, answer, sources, retrieval, modeLabel) {
+      const answerHTML = renderMarkdown(answer);
+      const sourceHTML = buildSourceHTML(sources);
+      const statsText = buildStatsText(retrieval || {}, sources);
+      loadingEl.innerHTML = `
+        <div class="system-label">
+          CONDUIT${modeLabel || ''}
+          <span class="context-count" style="font-size:11px;opacity:0.6">${statsText}</span>
+        </div>
+        <div style="color:var(--text-primary);font-size:14px;padding:4px 0 12px 0">
+          ${answerHTML}
+        </div>
+        ${sourceHTML ? `
+          <details style="margin-top:4px">
+            <summary style="font-size:12px;color:var(--text-tertiary);cursor:pointer;user-select:none">Sources (${sources.length})</summary>
+            <div style="margin-top:8px">${sourceHTML}</div>
+          </details>
+        ` : ''}
+      `;
+    }
+
+    async function askStreaming(query, loadingId) {
+      const container = document.getElementById('ask-messages');
+      const resp = await authFetch(`${API}/api/v1/ask`, {
+        method: 'POST',
+        body: JSON.stringify({ query, limit: 8, mode: 'standard', stream: true }),
+      });
+
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.error || 'Query failed');
+      }
+
+      const loadingEl = document.getElementById(loadingId);
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let answerText = '';
+      let sources = [];
+      let retrieval = {};
+      let answerEl = null;
+
+      function processSSELines(lines) {
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            eventType = line.slice(7);
+          } else if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6));
+
+            if (eventType === 'retrieval') {
+              sources = data.sources || [];
+              retrieval = data.retrieval || {};
+              const statsText = buildStatsText(retrieval, sources);
+              loadingEl.innerHTML = `
+                <div class="system-label">
+                  CONDUIT
+                  <span class="context-count" style="font-size:11px;opacity:0.6">${statsText}</span>
+                </div>
+                <div id="${loadingId}-answer" style="color:var(--text-primary);font-size:14px;padding:4px 0 12px 0"></div>
+              `;
+              answerEl = document.getElementById(`${loadingId}-answer`);
+            } else if (eventType === 'token') {
+              answerText += data.token;
+              if (answerEl) {
+                answerEl.innerHTML = renderMarkdown(answerText);
+                container.scrollTop = container.scrollHeight;
+              }
+            } else if (eventType === 'done') {
+              renderAskResult(loadingEl, answerText, sources, retrieval, '');
+            } else if (eventType === 'error') {
+              loadingEl.innerHTML = `<div class="auth-error">${escapeHtml(data.error || 'Stream error')}</div>`;
+            }
+            eventType = '';
+          }
+        }
+      }
+
+      let eventType = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        processSSELines(lines);
+      }
+
+      // Flush remaining buffer
+      if (buffer.trim()) {
+        processSSELines(buffer.split('\n'));
+      }
+
+      // If stream ended without 'done' event, render what we have
+      if (answerText && !loadingEl.querySelector('.system-label + div details')) {
+        renderAskResult(loadingEl, answerText, sources, retrieval, '');
+      }
+    }
+
+    async function askNonStreaming(query, loadingId, isSwarm) {
+      const resp = await authFetch(`${API}/api/v1/ask`, {
+        method: 'POST',
+        body: JSON.stringify({ query, limit: 8, mode: isSwarm ? 'swarm' : 'standard' }),
+      });
+
+      const data = await resp.json();
+      const loadingEl = document.getElementById(loadingId);
+
+      if (!resp.ok) {
+        loadingEl.innerHTML = `<div class="auth-error">${data.error || 'Query failed'}</div>`;
+        return;
+      }
+
+      const swarm = data.swarm;
+      const modeLabel = data.mode === 'swarm'
+        ? `<span style="background:var(--violet-bg);color:var(--violet-accent);padding:1px 6px;border-radius:4px;font-size:10px;margin-left:6px">swarm${swarm ? ` · ${swarm.iterations} rounds · consensus ${(swarm.consensusScore*100).toFixed(0)}%` : ''}</span>`
+        : '';
+
+      renderAskResult(loadingEl, data.answer || 'No answer generated.', data.sources || [], data.retrieval || {}, modeLabel);
+    }
+
+    // ─── Utilities ──────────────────────────────────────────────────
+    async function refreshStats() {
+      try {
+        const resp = await authFetch(`${API}/graphql`, {
+          method: 'POST',
+          body: JSON.stringify({
+            query: '{ stats { totalZettels totalChunks totalRelationships domainBreakdown { domain zettelCount topTopics { topic count } } } }',
+          }),
+        });
+        const data = await resp.json();
+        if (data.data?.stats) {
+          graphStats = data.data.stats;
+          updateSidebarStats();
+          if (currentView === 'knowledge') {
+            renderStats();
+            renderDomains();
+          }
+        }
+      } catch (e) { /* silent */ }
+    }
+
+    // ─── Kai Management ──────────────────────────────────────────────
+    async function loadKais() {
+      try {
+        const resp = await authFetch(`${API}/graphql`, {
+          method: 'POST',
+          body: JSON.stringify({ query: '{ kais { id name description domains topics knowledgeTypes isDefault } }' }),
+        });
+        const data = await resp.json();
+        kaiList = data.data?.kais || [];
+        if (kaiList.length === 0) return;
+
+        document.getElementById('kai-switcher').style.display = '';
+        const select = document.getElementById('kai-select');
+        select.innerHTML = kaiList.map(k =>
+          `<option value="${k.isDefault ? '' : k.id}" ${(!currentKaiId && k.isDefault) || currentKaiId === k.id ? 'selected' : ''}>${escapeHtml(k.name)}</option>`
+        ).join('');
+
+        // Show delete button for non-default kais
+        document.getElementById('kai-delete-btn').style.display = currentKaiId ? '' : 'none';
+
+        // Populate domain hints in create modal
+        if (graphStats?.domainBreakdown) {
+          document.getElementById('kai-domain-hints').textContent =
+            'Available: ' + graphStats.domainBreakdown.map(d => d.domain).join(', ');
+        }
+      } catch (e) { /* Kais table may not exist yet */ }
+    }
+
+    function selectKai(kaiId) {
+      currentKaiId = kaiId;
+      if (kaiId) {
+        localStorage.setItem('conduit_kai_id', kaiId);
+      } else {
+        localStorage.removeItem('conduit_kai_id');
+      }
+      document.getElementById('kai-delete-btn').style.display = kaiId ? '' : 'none';
+      // Reload stats + current view with new Kai filter
+      refreshStats().then(() => loadDashboard());
+    }
+
+    function showCreateKaiModal() {
+      document.getElementById('kai-modal').classList.remove('hidden');
+      document.getElementById('kai-name').value = '';
+      document.getElementById('kai-desc').value = '';
+      document.getElementById('kai-domains').value = '';
+      document.getElementById('kai-topics').value = '';
+      document.getElementById('kai-name').focus();
+    }
+
+    async function createKai() {
+      const name = document.getElementById('kai-name').value.trim();
+      if (!name) return;
+      const description = document.getElementById('kai-desc').value.trim() || null;
+      const domains = document.getElementById('kai-domains').value.split(',').map(s => s.trim()).filter(Boolean);
+      const topics = document.getElementById('kai-topics').value.split(',').map(s => s.trim()).filter(Boolean);
+
+      try {
+        const resp = await authFetch(`${API}/graphql`, {
+          method: 'POST',
+          body: JSON.stringify({
+            query: `mutation CreateKai($name: String!, $desc: String, $domains: [String!], $topics: [String!]) {
+              createKai(name: $name, description: $desc, domains: $domains, topics: $topics) { id name }
+            }`,
+            variables: { name, desc: description, domains: domains.length ? domains : null, topics: topics.length ? topics : null },
+          }),
+        });
+        const data = await resp.json();
+        if (data.errors) throw new Error(data.errors[0].message);
+        const newKai = data.data.createKai;
+        document.getElementById('kai-modal').classList.add('hidden');
+        currentKaiId = newKai.id;
+        localStorage.setItem('conduit_kai_id', newKai.id);
+        await loadKais();
+      } catch (e) {
+        alert('Failed to create Kai: ' + e.message);
+      }
+    }
+
+    async function deleteCurrentKai() {
+      if (!currentKaiId) return;
+      const kai = kaiList.find(k => k.id === currentKaiId);
+      if (!confirm(`Delete "${kai?.name || currentKaiId}"? This cannot be undone.`)) return;
+      try {
+        const resp = await authFetch(`${API}/graphql`, {
+          method: 'POST',
+          body: JSON.stringify({
+            query: `mutation DeleteKai($id: ID!) { deleteKai(id: $id) }`,
+            variables: { id: currentKaiId },
+          }),
+        });
+        const data = await resp.json();
+        if (data.errors) throw new Error(data.errors[0].message);
+        currentKaiId = '';
+        localStorage.removeItem('conduit_kai_id');
+        await loadKais();
+      } catch (e) {
+        alert('Failed to delete Kai: ' + e.message);
+      }
+    }
+
+    function toggleTheme() {
+      const body = document.body;
+      const isDark = body.classList.contains('theme-dark');
+      body.classList.toggle('theme-dark', !isDark);
+      body.classList.toggle('theme-light', isDark);
+      document.getElementById('theme-icon').textContent = isDark ? '\u2600' : '\u263D';
+      document.getElementById('theme-label').textContent = isDark ? 'Dark mode' : 'Light mode';
+      localStorage.setItem('conduit_theme', isDark ? 'light' : 'dark');
+    }
+
+    // Restore theme
+    if (localStorage.getItem('conduit_theme') === 'light') {
+      document.body.classList.remove('theme-dark');
+      document.body.classList.add('theme-light');
+      document.getElementById('theme-icon').textContent = '\u2600';
+      document.getElementById('theme-label').textContent = 'Dark mode';
+    }
+
+    // ─── Edit Modal ──────────────────────────────────────────────────
+    async function openEditModal(zettelId, title) {
+      document.getElementById('edit-modal').classList.remove('hidden');
+      document.getElementById('edit-zettel-id').value = zettelId;
+      document.getElementById('edit-modal-title').textContent = 'Loading...';
+      document.getElementById('edit-title').value = '';
+      document.getElementById('edit-content').value = '';
+      resetProvenanceFields();
+
+      try {
+        const resp = await authFetch(`${API}/api/v1/zettels/${encodeURIComponent(zettelId)}`, {
+        });
+        if (!resp.ok) throw new Error('Failed to load zettel');
+        const data = await resp.json();
+
+        document.getElementById('edit-modal-title').textContent = `Edit: ${data.title}`;
+        document.getElementById('edit-title').value = data.title || '';
+        document.getElementById('edit-content').value = data.content || '';
+        populateProvenanceFields(data.provenance, data.sourceUrl);
+      } catch (e) {
+        document.getElementById('edit-modal-title').textContent = `Edit: ${title}`;
+        document.getElementById('edit-content').value = '(Failed to load content)';
+      }
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.add('hidden');
+    }
+
+    async function saveZettel() {
+      const id = document.getElementById('edit-zettel-id').value;
+      const btn = document.getElementById('edit-save-btn');
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+
+      try {
+        const body = {
+          title: document.getElementById('edit-title').value,
+          content: document.getElementById('edit-content').value,
+        };
+        const prov = buildProvenanceFromForm();
+        if (prov) {
+          body.provenance = prov;
+          body.sourceUrl = prov.url || null;
+        } else {
+          body.provenance = null;
+          body.sourceUrl = null;
+        }
+
+        const resp = await authFetch(`${API}/api/v1/zettels/${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json();
+          throw new Error(err.error || 'Save failed');
+        }
+
+        btn.textContent = 'Saved!';
+        btn.style.background = 'var(--success)';
+        setTimeout(() => {
+          closeEditModal();
+          btn.textContent = 'Save';
+          btn.style.background = 'var(--accent)';
+          btn.disabled = false;
+        }, 800);
+      } catch (e) {
+        btn.textContent = 'Save';
+        btn.disabled = false;
+        alert('Save failed: ' + e.message);
+      }
+    }
+
+    async function deleteZettel() {
+      const id = document.getElementById('edit-zettel-id').value;
+      if (!confirm('Delete this zettel permanently? This cannot be undone.')) return;
+      const btn = document.getElementById('edit-delete-btn');
+      btn.textContent = 'Deleting...';
+      btn.disabled = true;
+      try {
+        const resp = await authFetch(`${API}/api/v1/zettels/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+        });
+        if (!resp.ok) throw new Error('Delete failed');
+        closeEditModal();
+        refreshStats();
+        if (currentView === 'knowledge') loadAllKnowledge();
+        if (currentView === 'graph') graphRenderer.load();
+      } catch (e) {
+        alert('Delete failed: ' + e.message);
+      } finally {
+        btn.textContent = 'Delete';
+        btn.disabled = false;
+      }
+    }
+
+    // Close modal on backdrop click or Escape
+    document.getElementById('edit-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'edit-modal') closeEditModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !document.getElementById('edit-modal').classList.contains('hidden')) {
+        closeEditModal();
+      }
+    });
+
+    // ─── Graph Topology Renderer ──────────────────────────────────
+    const graphRenderer = (() => {
+      let canvas, ctx, width, height;
+      let nodes = [], edges = [];
+      let simNodes = []; // simulation nodes with x,y,vx,vy
+      let transform = { x: 0, y: 0, scale: 1 };
+      let drag = null, hoveredNode = null, selectedNode = null;
+      let animFrame = null, loaded = false;
+      let cooling = 1.0, autoFit = true;
+
+      // Domain → color palette (Palantir-inspired cool tones)
+      const DOMAIN_COLORS = [
+        '#38bdf8', '#a78bfa', '#34d399', '#fbbf24', '#f87171',
+        '#818cf8', '#fb923c', '#2dd4bf', '#e879f9', '#94a3b8',
+      ];
+      // Stable domain → color mapping so colors don't shift between views
+      const STABLE_DOMAIN_COLORS = {
+        'data-engineering': '#38bdf8', 'snowflake': '#2dd4bf', 'sql': '#818cf8',
+        'databricks': '#fb923c', 'aws': '#fbbf24', 'delta-lake': '#34d399',
+        'redshift': '#f87171', 'data-warehouse': '#a78bfa', 'genai': '#e879f9',
+        'spark': '#ff6b6b', 'machine-learning': '#c084fc', 'mlflow': '#67e8f9',
+        's3': '#fcd34d', 'storage': '#fcd34d', 'security': '#f87171',
+        'streaming': '#4ade80', 'kinesis': '#4ade80', 'infrastructure': '#94a3b8',
+        'terraform': '#94a3b8', 'iam': '#fca5a5', 'athena': '#fdba74',
+        'emr': '#fde047', 'glue': '#a3e635', 'etl': '#a3e635',
+      };
+      const TYPE_COLORS = {
+        concept: '#38bdf8', pattern: '#a78bfa', process: '#34d399',
+        tool: '#fbbf24', framework: '#818cf8', principle: '#f87171',
+      };
+      let domainColorMap = {};
+
+      function init() {
+        if (!loaded) load();
+        else resizeAndDraw();
+      }
+
+      async function load(domain) {
+        document.getElementById('graph-status').textContent = 'Loading graph...';
+        try {
+          const params = new URLSearchParams({ view: 'topology', limit: '500' });
+          if (domain) params.set('domain', domain);
+          const resp = await authFetch(`${API}/api/v1/zettels?${params}`);
+          const data = await resp.json();
+          nodes = data.nodes || [];
+          edges = data.edges || [];
+          graphTotal = data.total || nodes.length;
+
+          // Build domain color map
+          const allDomains = [...new Set(nodes.flatMap(n => n.domains || []))];
+          domainColorMap = {};
+          let dynamicIdx = 0;
+          allDomains.forEach((d) => {
+            domainColorMap[d] = STABLE_DOMAIN_COLORS[d] || DOMAIN_COLORS[dynamicIdx++ % DOMAIN_COLORS.length];
+          });
+
+          // Build adjacency for quick lookup
+          const adjacency = {};
+          nodes.forEach(n => { adjacency[n.id] = { in: 0, out: 0 }; });
+          edges.forEach(e => {
+            if (adjacency[e.source]) adjacency[e.source].out++;
+            if (adjacency[e.target]) adjacency[e.target].in++;
+          });
+
+          // Initialize simulation nodes in a circle
+          const cx = 0, cy = 0, radius = Math.max(200, nodes.length * 5);
+          simNodes = nodes.map((n, i) => {
+            const angle = (2 * Math.PI * i) / nodes.length;
+            const deg = (adjacency[n.id]?.in || 0) + (adjacency[n.id]?.out || 0);
+            return {
+              ...n,
+              x: cx + radius * Math.cos(angle) + (Math.random() - 0.5) * 20,
+              y: cy + radius * Math.sin(angle) + (Math.random() - 0.5) * 20,
+              vx: 0, vy: 0,
+              degree: deg,
+              radius: Math.max(4, Math.min(14, 4 + deg * 1.5)),
+            };
+          });
+
+          // Index for quick lookup
+          simNodes._index = {};
+          simNodes.forEach((n, i) => { simNodes._index[n.id] = i; });
+
+          loaded = true;
+          cooling = 1.0;
+          const matchCount = domain ? nodes.filter(n => (n.domains || []).includes(domain)).length : nodes.length;
+          const neighborCount = nodes.length - matchCount;
+          const totalLabel = graphTotal > matchCount ? ` (of ${graphTotal.toLocaleString()})` : '';
+          const domainLabel = domain ? ` [${domain}]` : '';
+          const neighborLabel = neighborCount > 0 ? ` + ${neighborCount} neighbors` : '';
+          document.getElementById('graph-status').textContent = domain
+            ? `${matchCount} ${domain} nodes${totalLabel}${neighborLabel} · ${edges.length} edges`
+            : `${nodes.length} nodes${totalLabel} · ${edges.length} edges`;
+          setupCanvas();
+          renderLegend();
+          simulate();
+        } catch (e) {
+          document.getElementById('graph-status').textContent = 'Failed to load: ' + e.message;
+        }
+      }
+
+      function setupCanvas() {
+        canvas = document.getElementById('graph-canvas');
+        ctx = canvas.getContext('2d');
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Pan & zoom
+        canvas.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          autoFit = false;
+          const zf = e.deltaY < 0 ? 1.1 : 0.9;
+          const mx = e.offsetX, my = e.offsetY;
+          transform.x = mx - (mx - transform.x) * zf;
+          transform.y = my - (my - transform.y) * zf;
+          transform.scale *= zf;
+          draw();
+        }, { passive: false });
+
+        canvas.addEventListener('mousedown', (e) => {
+          autoFit = false;
+          if (overviewMode) {
+            const pos = screenToWorld(e.offsetX, e.offsetY);
+            const bubble = findBubble(pos.x, pos.y);
+            if (bubble) { drillDomain(bubble.domain); return; }
+            drag = { pan: true, startX: e.offsetX - transform.x, startY: e.offsetY - transform.y };
+            canvas.style.cursor = 'grabbing';
+            return;
+          }
+          const pos = screenToWorld(e.offsetX, e.offsetY);
+          const node = findNode(pos.x, pos.y);
+          if (node) {
+            drag = { node, offsetX: pos.x - node.x, offsetY: pos.y - node.y, moved: false };
+            canvas.style.cursor = 'grabbing';
+          } else {
+            drag = { pan: true, startX: e.offsetX - transform.x, startY: e.offsetY - transform.y };
+            canvas.style.cursor = 'grabbing';
+          }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+          if (drag?.pan) {
+            transform.x = e.offsetX - drag.startX;
+            transform.y = e.offsetY - drag.startY;
+            draw();
+            return;
+          }
+          if (drag?.node) {
+            const pos = screenToWorld(e.offsetX, e.offsetY);
+            drag.node.x = pos.x - drag.offsetX;
+            drag.node.y = pos.y - drag.offsetY;
+            drag.node.vx = 0; drag.node.vy = 0;
+            drag.moved = true;
+            cooling = Math.max(cooling, 0.3);
+            draw();
+            return;
+          }
+          // Hover detection
+          if (overviewMode) {
+            const pos = screenToWorld(e.offsetX, e.offsetY);
+            const bubble = findBubble(pos.x, pos.y);
+            if (bubble !== hoveredBubble) {
+              hoveredBubble = bubble;
+              canvas.style.cursor = bubble ? 'pointer' : 'grab';
+              draw();
+            }
+            return;
+          }
+          const pos = screenToWorld(e.offsetX, e.offsetY);
+          const node = findNode(pos.x, pos.y);
+          if (node !== hoveredNode) {
+            hoveredNode = node;
+            canvas.style.cursor = node ? 'pointer' : 'grab';
+            if (node) showTooltip(e.offsetX, e.offsetY, node);
+            else hideTooltip();
+            draw();
+          }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+          if (drag?.node && !drag.moved) {
+            selectNode(drag.node);
+          }
+          drag = null;
+          canvas.style.cursor = hoveredNode ? 'pointer' : 'grab';
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+          hoveredNode = null;
+          hideTooltip();
+          draw();
+        });
+
+        // Only set initial transform for node view, not overview (overview computes its own fit)
+        if (!overviewMode) {
+          transform.scale = 0.3;
+          transform.x = width / 2;
+          transform.y = height / 2;
+          autoFit = true;
+        }
+      }
+
+      function resizeCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        width = rect.width; height = rect.height;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        draw();
+      }
+
+      function resizeAndDraw() {
+        if (canvas) resizeCanvas();
+      }
+
+      function screenToWorld(sx, sy) {
+        return { x: (sx - transform.x) / transform.scale, y: (sy - transform.y) / transform.scale };
+      }
+
+      function worldToScreen(wx, wy) {
+        return { x: wx * transform.scale + transform.x, y: wy * transform.scale + transform.y };
+      }
+
+      function findBubble(wx, wy) {
+        for (const b of overviewBubbles) {
+          const dx = wx - b.x, dy = wy - b.y;
+          if (dx * dx + dy * dy < b.size * b.size) return b;
+        }
+        return null;
+      }
+
+      function findNode(wx, wy) {
+        for (let i = simNodes.length - 1; i >= 0; i--) {
+          const n = simNodes[i];
+          const dx = wx - n.x, dy = wy - n.y;
+          if (dx * dx + dy * dy < (n.radius + 3) * (n.radius + 3)) return n;
+        }
+        return null;
+      }
+
+      function getNodeColor(node) {
+        const mode = document.getElementById('graph-color-by').value;
+        if (mode === 'type') {
+          return TYPE_COLORS[node.knowledgeType] || '#94a3b8';
+        }
+        const domain = (node.domains || [])[0];
+        return domain ? (domainColorMap[domain] || '#94a3b8') : '#94a3b8';
+      }
+
+      function recolor() { renderLegend(); draw(); }
+
+      function renderLegend() {
+        const mode = document.getElementById('graph-color-by').value;
+        const container = document.getElementById('graph-legend-items');
+        let items = [];
+        if (mode === 'domain') {
+          // Count by PRIMARY domain (first in array) — matches how nodes are actually colored
+          const primaryCounts = {};
+          simNodes.forEach(n => {
+            const primary = (n.domains || [])[0];
+            if (primary) primaryCounts[primary] = (primaryCounts[primary] || 0) + 1;
+          });
+          items = Object.entries(primaryCounts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => {
+              const color = domainColorMap[name] || '#94a3b8';
+              const isActive = domainFilter === name;
+              return `<div style="display:flex;align-items:center;gap:6px;padding:3px 4px;cursor:pointer;border-radius:4px;${isActive ? 'background:var(--bg-hover)' : ''}" onclick="graphRenderer.filterDomain('${escapeHtml(name)}')">
+                <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;box-shadow:0 0 0 ${isActive ? '2' : '0'}px ${color}"></span>
+                <span style="color:var(--text-primary);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${escapeHtml(name)}</span>
+                <span style="color:var(--text-tertiary);font-size:10px">${count}</span>
+              </div>`;
+            });
+        } else {
+          items = Object.entries(TYPE_COLORS).map(([name, color]) => {
+            const count = simNodes.filter(n => n.knowledgeType === name).length;
+            if (count === 0) return '';
+            return `<div style="display:flex;align-items:center;gap:6px;padding:3px 4px">
+              <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>
+              <span style="color:var(--text-primary);flex:1;font-size:11px">${escapeHtml(name)}</span>
+              <span style="color:var(--text-tertiary);font-size:10px">${count}</span>
+            </div>`;
+          });
+        }
+        // No-domain count
+        const noDomain = simNodes.filter(n => !(n.domains || []).length).length;
+        if (noDomain > 0 && mode === 'domain') {
+          items.push(`<div style="display:flex;align-items:center;gap:6px;padding:3px 4px">
+            <span style="width:8px;height:8px;border-radius:50%;background:#94a3b8;flex-shrink:0"></span>
+            <span style="color:var(--text-tertiary);flex:1;font-size:11px;font-style:italic">uncategorized</span>
+            <span style="color:var(--text-tertiary);font-size:10px">${noDomain}</span>
+          </div>`);
+        }
+        container.innerHTML = items.filter(Boolean).join('');
+      }
+
+      // ─── Force Simulation ─────────────────────────────
+      function simulate() {
+        if (overviewMode) { draw(); return; }
+        if (cooling < 0.001) { draw(); return; }
+
+        const REPULSION = 800;
+        const ATTRACTION = 0.008;
+        const CENTER_GRAVITY = 0.01;
+        const DAMPING = 0.85;
+        const n = simNodes.length;
+
+        // Reset forces
+        for (let i = 0; i < n; i++) {
+          simNodes[i].fx = 0; simNodes[i].fy = 0;
+        }
+
+        // Repulsion (Barnes-Hut would be better for large N, but direct is fine for <500)
+        for (let i = 0; i < n; i++) {
+          for (let j = i + 1; j < n; j++) {
+            let dx = simNodes[j].x - simNodes[i].x;
+            let dy = simNodes[j].y - simNodes[i].y;
+            let dist2 = dx * dx + dy * dy;
+            if (dist2 < 1) dist2 = 1;
+            const force = REPULSION / dist2;
+            const fx = dx * force, fy = dy * force;
+            simNodes[i].fx -= fx; simNodes[i].fy -= fy;
+            simNodes[j].fx += fx; simNodes[j].fy += fy;
+          }
+        }
+
+        // Attraction along edges
+        for (const e of edges) {
+          const si = simNodes._index[e.source];
+          const ti = simNodes._index[e.target];
+          if (si === undefined || ti === undefined) continue;
+          const s = simNodes[si], t = simNodes[ti];
+          const dx = t.x - s.x, dy = t.y - s.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const force = (dist - 80) * ATTRACTION; // target distance ~80px
+          const fx = (dx / dist) * force, fy = (dy / dist) * force;
+          s.fx += fx; s.fy += fy;
+          t.fx -= fx; t.fy -= fy;
+        }
+
+        // Center gravity
+        for (let i = 0; i < n; i++) {
+          simNodes[i].fx -= simNodes[i].x * CENTER_GRAVITY;
+          simNodes[i].fy -= simNodes[i].y * CENTER_GRAVITY;
+        }
+
+        // Integrate
+        for (let i = 0; i < n; i++) {
+          if (drag?.node === simNodes[i]) continue;
+          simNodes[i].vx = (simNodes[i].vx + simNodes[i].fx * cooling) * DAMPING;
+          simNodes[i].vy = (simNodes[i].vy + simNodes[i].fy * cooling) * DAMPING;
+          simNodes[i].x += simNodes[i].vx;
+          simNodes[i].y += simNodes[i].vy;
+        }
+
+        cooling *= 0.995;
+        // Smoothly converge toward fitted view while simulation runs (stops on user interaction)
+        if (autoFit && cooling < 0.7 && cooling > 0.01) {
+          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+          simNodes.forEach(n => {
+            minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+            minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+          });
+          const pad = 100;
+          const gw = (maxX - minX) || 200, gh = (maxY - minY) || 200;
+          const targetScale = Math.min((width - pad * 2) / gw, (height - pad * 2) / gh, 1.2) * 0.85;
+          const targetX = width / 2 - ((minX + maxX) / 2) * targetScale;
+          const targetY = height / 2 - ((minY + maxY) / 2) * targetScale;
+          const ease = 0.08;
+          transform.scale += (targetScale - transform.scale) * ease;
+          transform.x += (targetX - transform.x) * ease;
+          transform.y += (targetY - transform.y) * ease;
+        }
+        draw();
+        animFrame = requestAnimationFrame(simulate);
+      }
+
+      // ─── Drawing ──────────────────────────────────────
+      function draw() {
+        if (!ctx) return;
+        if (overviewMode) { drawOverview(); return; }
+        ctx.clearRect(0, 0, width, height);
+        ctx.save();
+        ctx.translate(transform.x, transform.y);
+        ctx.scale(transform.scale, transform.scale);
+
+        // Edge type → dash pattern
+        const EDGE_DASH = {
+          EXTENDS: [], REQUIRES: [6, 3], APPLIES: [2, 3],
+          CONTRADICTS: [8, 4, 2, 4], IMPLEMENTS: [4, 2],
+        };
+        const EDGE_COLOR = {
+          EXTENDS: 'rgba(56,189,248,0.4)', REQUIRES: 'rgba(167,139,250,0.4)',
+          APPLIES: 'rgba(52,211,153,0.4)', CONTRADICTS: 'rgba(248,113,113,0.45)',
+          IMPLEMENTS: 'rgba(129,140,248,0.4)',
+        };
+
+        // Draw edges
+        ctx.lineWidth = 1;
+        for (const e of edges) {
+          const si = simNodes._index[e.source];
+          const ti = simNodes._index[e.target];
+          if (si === undefined || ti === undefined) continue;
+          const s = simNodes[si], t = simNodes[ti];
+
+          const isHighlighted = selectedNode && (selectedNode.id === e.source || selectedNode.id === e.target);
+          const isHovered = hoveredNode && (hoveredNode.id === e.source || hoveredNode.id === e.target);
+          const sDomainMatch = !domainFilter || (s.domains || []).includes(domainFilter);
+          const tDomainMatch = !domainFilter || (t.domains || []).includes(domainFilter);
+          const edgeDimmed = domainFilter && (!sDomainMatch || !tDomainMatch);
+
+          ctx.beginPath();
+          ctx.setLineDash(EDGE_DASH[e.type] || []);
+          ctx.strokeStyle = edgeDimmed
+            ? 'rgba(148,163,184,0.02)'
+            : isHighlighted || isHovered
+              ? (EDGE_COLOR[e.type] || 'rgba(148,163,184,0.3)').replace(/[\d.]+\)$/, '0.8)')
+              : (EDGE_COLOR[e.type] || 'rgba(148,163,184,0.2)');
+          ctx.lineWidth = isHighlighted || isHovered ? 2.5 : 1;
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(t.x, t.y);
+          ctx.stroke();
+
+          // Arrowhead
+          if (isHighlighted || isHovered || transform.scale > 0.6) {
+            const dx = t.x - s.x, dy = t.y - s.y;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const ux = dx / len, uy = dy / len;
+            const ax = t.x - ux * (t.radius + 3), ay = t.y - uy * (t.radius + 3);
+            const arrowSize = 5;
+            ctx.beginPath();
+            ctx.setLineDash([]);
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(ax - ux * arrowSize - uy * arrowSize * 0.5, ay - uy * arrowSize + ux * arrowSize * 0.5);
+            ctx.lineTo(ax - ux * arrowSize + uy * arrowSize * 0.5, ay - uy * arrowSize - ux * arrowSize * 0.5);
+            ctx.closePath();
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.fill();
+          }
+        }
+        ctx.setLineDash([]);
+
+        // Draw nodes
+        for (const n of simNodes) {
+          const color = getNodeColor(n);
+          const isSelected = selectedNode === n;
+          const isHovered2 = hoveredNode === n;
+          const isConnected = selectedNode && edges.some(e =>
+            (e.source === selectedNode.id && e.target === n.id) ||
+            (e.target === selectedNode.id && e.source === n.id)
+          );
+          const domainMatch = !domainFilter || (n.domains || []).includes(domainFilter);
+          const dimmed = (selectedNode && !isSelected && !isConnected) || (domainFilter && !domainMatch);
+
+          // Render radius: boost matched nodes, shrink dimmed ones
+          const renderRadius = dimmed ? Math.max(2, n.radius * 0.6) : n.radius;
+
+          // Glow for non-dimmed nodes
+          if (!dimmed && renderRadius >= 5) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, renderRadius + 5, 0, Math.PI * 2);
+            ctx.fillStyle = color + '25';
+            ctx.fill();
+            ctx.restore();
+          }
+
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, renderRadius, 0, Math.PI * 2);
+          ctx.fillStyle = dimmed ? color + '0d' : color;
+          ctx.fill();
+          // Border for definition
+          if (!dimmed) {
+            ctx.strokeStyle = color + 'cc';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          } else {
+            ctx.strokeStyle = color + '15';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+
+          if (isSelected || isHovered2) {
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, n.radius + 4, 0, Math.PI * 2);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+
+          // Label (only when zoomed or hovered/selected/connected)
+          if (transform.scale > 0.5 || isSelected || isHovered2 || isConnected) {
+            const fontSize = Math.max(9, Math.min(12, 10 / transform.scale));
+            ctx.font = `${isSelected ? 600 : 400} ${fontSize}px -apple-system, sans-serif`;
+            ctx.fillStyle = dimmed ? 'rgba(148,163,184,0.08)' : 'rgba(249,250,251,0.95)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            const label = n.title.length > 30 ? n.title.slice(0, 28) + '...' : n.title;
+            ctx.fillText(label, n.x, n.y + n.radius + 4);
+          }
+        }
+
+        ctx.restore();
+      }
+
+      function showTooltip(sx, sy, node) {
+        const el = document.getElementById('graph-tooltip');
+        const title = document.getElementById('graph-tooltip-title');
+        const meta = document.getElementById('graph-tooltip-meta');
+        title.textContent = node.title;
+        const domains = (node.domains || []).join(', ');
+        const topics = (node.topics || []).slice(0, 4).join(', ');
+        meta.innerHTML = `${node.knowledgeType || '?'} · ${domains}<br/>${topics}<br/>${node.degree} connections`;
+        el.style.display = 'block';
+        el.style.left = Math.min(sx + 12, width - 320) + 'px';
+        el.style.top = Math.min(sy - 10, height - 100) + 'px';
+      }
+
+      function hideTooltip() {
+        document.getElementById('graph-tooltip').style.display = 'none';
+      }
+
+      function selectNode(node) {
+        selectedNode = node;
+        hideTooltip();
+        const panel = document.getElementById('graph-detail');
+        if (!node) { panel.style.display = 'none'; draw(); return; }
+
+        panel.style.display = 'block';
+        document.getElementById('graph-detail-title').textContent = node.title;
+
+        const badges = (node.domains || []).map(d =>
+          `<span class="badge badge-domain">${escapeHtml(d)}</span>`
+        ).join('') + ` <span class="badge badge-type">${escapeHtml(node.knowledgeType || '?')}</span>`;
+        document.getElementById('graph-detail-badges').innerHTML = badges;
+
+        // Find connections
+        const conns = edges.filter(e => e.source === node.id || e.target === node.id);
+        if (conns.length > 0) {
+          const connHTML = conns.map(e => {
+            const otherId = e.source === node.id ? e.target : e.source;
+            const otherNode = simNodes.find(n => n.id === otherId);
+            const dir = e.source === node.id ? '→' : '←';
+            return `<div style="padding:3px 0;cursor:pointer" onclick="graphRenderer.focusNode('${escapeHtml(otherId)}')">${dir} <span style="color:var(--accent-text)">${escapeHtml(otherNode?.title || otherId)}</span> <span style="opacity:0.5">${e.type}</span></div>`;
+          }).join('');
+          document.getElementById('graph-detail-connections').innerHTML = `<div style="margin-top:6px;font-size:11px;color:var(--text-tertiary);margin-bottom:4px">${conns.length} connections</div>` + connHTML;
+        } else {
+          document.getElementById('graph-detail-connections').innerHTML = '<div style="color:var(--text-tertiary);font-size:11px">No connections</div>';
+        }
+
+        document.getElementById('graph-detail-edit').onclick = () => openEditModal(node.id, node.title);
+        document.getElementById('graph-detail-delete').onclick = async () => {
+          if (!confirm(`Delete "${node.title}" permanently?`)) return;
+          try {
+            await authFetch(`${API}/api/v1/zettels/${encodeURIComponent(node.id)}`, { method: 'DELETE' });
+            selectedNode = null;
+            panel.style.display = 'none';
+            load();
+            refreshStats();
+          } catch (e) { alert('Delete failed: ' + e.message); }
+        };
+
+        draw();
+      }
+
+      function focusNode(id) {
+        const node = simNodes.find(n => n.id === id);
+        if (!node) return;
+        selectNode(node);
+        // Center on node
+        transform.x = width / 2 - node.x * transform.scale;
+        transform.y = height / 2 - node.y * transform.scale;
+        draw();
+      }
+
+      function closeDetail() {
+        selectedNode = null;
+        document.getElementById('graph-detail').style.display = 'none';
+        draw();
+      }
+
+      function resetView() {
+        if (simNodes.length === 0) return;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        simNodes.forEach(n => {
+          minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+          minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+        });
+        const pad = 100;
+        const gw = (maxX - minX) || 200, gh = (maxY - minY) || 200;
+        const scale = Math.min((width - pad * 2) / gw, (height - pad * 2) / gh, 1.2);
+        transform.scale = scale * 0.85; // slight zoom-out for breathing room
+        transform.x = width / 2 - ((minX + maxX) / 2) * transform.scale;
+        transform.y = height / 2 - ((minY + maxY) / 2) * transform.scale;
+        draw();
+      }
+
+      let domainFilter = null;
+      let graphTotal = 0;
+
+      function filterDomain(domain) {
+        const newFilter = domainFilter === domain ? null : domain;
+        domainFilter = newFilter;
+        // Re-fetch from API with domain filter for a focused subgraph
+        loaded = false;
+        load(newFilter);
+      }
+
+      // ─── Overview Mode (domain clusters) ───────────────────────
+      let overviewMode = false;
+      let overviewData = null;
+      let overviewBubbles = [];
+      let hoveredBubble = null;
+
+      async function goOverview() {
+        overviewMode = true;
+        autoFit = false;
+        if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+        domainFilter = null;
+        document.getElementById('graph-breadcrumb').innerHTML =
+          '<span style="cursor:pointer;color:var(--accent-text)" onclick="graphRenderer.goOverview()">All Domains</span>';
+        document.getElementById('graph-status').textContent = 'Loading overview...';
+        try {
+          const resp = await authFetch(`${API}/api/v1/zettels/topology/overview`, {
+          });
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${resp.status}`);
+          }
+          overviewData = await resp.json();
+          document.getElementById('graph-status').textContent =
+            `${overviewData.totalZettels.toLocaleString()} zettels · ${overviewData.totalEdges.toLocaleString()} edges · ${overviewData.clusters.length} domains`;
+
+          // Layout bubbles with force simulation to prevent overlap
+          const clusters = overviewData.clusters.filter(c => c.count >= 5);
+          const maxCount = Math.max(...clusters.map(c => c.count));
+          let dynIdx = 0;
+          overviewBubbles = clusters.map((c, i) => {
+            const angle = (2 * Math.PI * i) / clusters.length;
+            const r = 200 + i * 15;
+            const size = Math.max(20, Math.min(70, 20 + Math.sqrt(c.count / maxCount) * 50));
+            return {
+              ...c,
+              x: r * Math.cos(angle),
+              y: r * Math.sin(angle),
+              vx: 0, vy: 0,
+              size,
+              color: STABLE_DOMAIN_COLORS[c.domain] || DOMAIN_COLORS[dynIdx++ % DOMAIN_COLORS.length],
+            };
+          });
+
+          // Run a quick force simulation to separate overlapping bubbles
+          for (let iter = 0; iter < 200; iter++) {
+            // Repulsion between all pairs
+            for (let i = 0; i < overviewBubbles.length; i++) {
+              for (let j = i + 1; j < overviewBubbles.length; j++) {
+                const a = overviewBubbles[i], b = overviewBubbles[j];
+                let dx = b.x - a.x, dy = b.y - a.y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                const minDist = a.size + b.size + 20; // padding between bubbles
+                if (dist < minDist) {
+                  const force = (minDist - dist) / dist * 0.4;
+                  dx *= force; dy *= force;
+                  a.x -= dx; a.y -= dy;
+                  b.x += dx; b.y += dy;
+                }
+              }
+            }
+            // Gentle pull toward center
+            for (const b of overviewBubbles) {
+              b.x *= 0.995;
+              b.y *= 0.995;
+            }
+          }
+
+          hoveredBubble = null;
+
+          if (!canvas) setupCanvas();
+          autoFit = false; // overview computes its own fit — don't let simulate() override
+          // Compute bounding box of all bubbles
+          const pad = 60;
+          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+          for (const b of overviewBubbles) {
+            minX = Math.min(minX, b.x - b.size);
+            maxX = Math.max(maxX, b.x + b.size);
+            minY = Math.min(minY, b.y - b.size);
+            maxY = Math.max(maxY, b.y + b.size);
+          }
+          const gw = (maxX - minX) || 400, gh = (maxY - minY) || 400;
+          const fitScale = Math.min((width - pad * 2) / gw, (height - pad * 2) / gh, 1.5);
+          transform = {
+            x: width / 2 - ((minX + maxX) / 2) * fitScale,
+            y: height / 2 - ((minY + maxY) / 2) * fitScale,
+            scale: fitScale,
+          };
+          renderOverviewLegend();
+          draw();
+        } catch (e) {
+          document.getElementById('graph-status').textContent = 'Failed: ' + e.message;
+        }
+      }
+
+      function renderOverviewLegend() {
+        const container = document.getElementById('graph-legend-items');
+        if (!overviewData) return;
+        let dynIdx2 = 0;
+        const items = overviewData.clusters
+          .filter(c => c.count >= 5)
+          .map((c, i) => {
+            const color = STABLE_DOMAIN_COLORS[c.domain] || DOMAIN_COLORS[dynIdx2++ % DOMAIN_COLORS.length];
+            return `<div style="display:flex;align-items:center;gap:6px;padding:3px 4px;cursor:pointer;border-radius:4px" onclick="graphRenderer.drillDomain('${escapeHtml(c.domain)}')">
+              <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>
+              <span style="color:var(--text-primary);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${escapeHtml(c.domain)}</span>
+              <span style="color:var(--text-tertiary);font-size:10px">${c.count.toLocaleString()}</span>
+            </div>`;
+          });
+        container.innerHTML = items.join('');
+      }
+
+      function drawOverview() {
+        if (!ctx || !overviewBubbles.length) return;
+        ctx.clearRect(0, 0, width, height);
+        ctx.save();
+        ctx.translate(transform.x, transform.y);
+        ctx.scale(transform.scale, transform.scale);
+
+        // Draw bridges (lines between domains)
+        if (overviewData?.bridges) {
+          for (const b of overviewData.bridges) {
+            const src = overviewBubbles.find(bb => bb.domain === b.source);
+            const tgt = overviewBubbles.find(bb => bb.domain === b.target);
+            if (!src || !tgt) continue;
+            const lineWidth = Math.max(0.5, Math.min(4, b.count / 20));
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(148,163,184,${Math.min(0.4, 0.05 + b.count / 200)})`;
+            ctx.lineWidth = lineWidth;
+            ctx.moveTo(src.x, src.y);
+            ctx.lineTo(tgt.x, tgt.y);
+            ctx.stroke();
+            // Bridge count label at midpoint
+            if (b.count >= 10 && transform.scale > 0.5) {
+              const mx = (src.x + tgt.x) / 2, my = (src.y + tgt.y) / 2;
+              ctx.fillStyle = 'rgba(148,163,184,0.6)';
+              ctx.font = '10px system-ui';
+              ctx.textAlign = 'center';
+              ctx.fillText(b.count.toString(), mx, my - 4);
+            }
+          }
+        }
+
+        // Draw bubbles
+        for (const b of overviewBubbles) {
+          const isHovered = hoveredBubble === b;
+
+          // Glow
+          if (isHovered) {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.size + 6, 0, Math.PI * 2);
+            ctx.fillStyle = b.color + '20';
+            ctx.fill();
+          }
+
+          // Circle
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+          ctx.fillStyle = b.color + (isHovered ? '40' : '25');
+          ctx.strokeStyle = b.color + (isHovered ? 'cc' : '80');
+          ctx.lineWidth = isHovered ? 2.5 : 1.5;
+          ctx.fill();
+          ctx.stroke();
+
+          // Domain label
+          ctx.fillStyle = b.color;
+          ctx.font = `${isHovered ? '600' : '500'} ${Math.max(11, b.size / 3.5)}px system-ui`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(b.domain, b.x, b.y - 6);
+
+          // Count
+          ctx.fillStyle = 'rgba(148,163,184,0.8)';
+          ctx.font = `500 ${Math.max(10, b.size / 4)}px system-ui`;
+          ctx.fillText(b.count.toLocaleString(), b.x, b.y + 10);
+
+          // Top topics on hover
+          if (isHovered && b.topTopics?.length) {
+            ctx.fillStyle = 'rgba(148,163,184,0.5)';
+            ctx.font = '10px system-ui';
+            b.topTopics.slice(0, 3).forEach((t, i) => {
+              ctx.fillText(t, b.x, b.y + 24 + i * 13);
+            });
+          }
+        }
+
+        ctx.restore();
+      }
+
+      function drillDomain(domain) {
+        overviewMode = false;
+        domainFilter = domain;
+        document.getElementById('graph-breadcrumb').innerHTML =
+          `<span style="cursor:pointer;color:var(--accent-text)" onclick="graphRenderer.goOverview()">All Domains</span> / <strong>${escapeHtml(domain)}</strong>`;
+        loaded = false;
+        load(domain);
+      }
+
+      async function search(query) {
+        if (!query.trim()) return;
+        document.getElementById('graph-status').textContent = 'Searching...';
+        try {
+          // Semantic search to find the best matching zettel
+          const searchResp = await authFetch(`${API}/graphql`, {
+            method: 'POST',
+            body: JSON.stringify({
+              query: `query Search($q: String!) { semanticSearch(query: $q, limit: 1) { zettelId zettelTitle } }`,
+              variables: { q: query },
+            }),
+          });
+          const searchData = await searchResp.json();
+          const topResult = (searchData.data?.semanticSearch || [])[0];
+          const match = topResult ? { id: topResult.zettelId, title: topResult.zettelTitle } : null;
+
+          if (match) {
+            // Load neighborhood
+            const nbResp = await authFetch(`${API}/api/v1/zettels/topology/neighborhood/${encodeURIComponent(match.id)}?depth=2&limit=150`);
+            const nbData = await nbResp.json();
+
+            overviewMode = false;
+            nodes = nbData.nodes || [];
+            edges = nbData.edges || [];
+            document.getElementById('graph-breadcrumb').innerHTML =
+              `<span style="cursor:pointer;color:var(--accent-text)" onclick="graphRenderer.goOverview()">All Domains</span> / Exploring: <strong>${escapeHtml(match.title)}</strong>`;
+
+            // Rebuild sim nodes
+            const allDomains = [...new Set(nodes.flatMap(n => n.domains || []))];
+            domainColorMap = {};
+            let dynamicIdx = 0;
+          allDomains.forEach((d) => {
+            domainColorMap[d] = STABLE_DOMAIN_COLORS[d] || DOMAIN_COLORS[dynamicIdx++ % DOMAIN_COLORS.length];
+          });
+
+            const cx = 0, cy = 0;
+            simNodes = nodes.map((n, i) => {
+              const depth = n.depth || 0;
+              const angle = (2 * Math.PI * i) / nodes.length;
+              const r = depth * 150 + 50;
+              return {
+                ...n,
+                x: cx + r * Math.cos(angle) + (Math.random() - 0.5) * 30,
+                y: cy + r * Math.sin(angle) + (Math.random() - 0.5) * 30,
+                vx: 0, vy: 0,
+                degree: 1,
+                radius: depth === 0 ? 12 : Math.max(4, 8 - depth * 2),
+              };
+            });
+            simNodes._index = {};
+            simNodes.forEach((n, i) => { simNodes._index[n.id] = i; });
+
+            loaded = true;
+            cooling = 1.0;
+            autoFit = true;
+            document.getElementById('graph-status').textContent = `${nodes.length} nodes · ${edges.length} edges (neighborhood of "${match.title}")`;
+            renderLegend();
+            simulate();
+          } else {
+            document.getElementById('graph-status').textContent = `No results for "${query}"`;
+          }
+        } catch (e) {
+          document.getElementById('graph-status').textContent = 'Search failed: ' + e.message;
+        }
+      }
+
+      // Override init to start with overview
+      function init() {
+        if (!loaded && !overviewMode) goOverview();
+        else if (overviewMode) { if (canvas) drawOverview(); }
+        else resizeAndDraw();
+      }
+
+      // Override draw to handle both modes
+      const _originalDraw = typeof draw === 'function' ? draw : null;
+
+      return { init, load, recolor, resetView, focusNode, closeDetail, resizeAndDraw, filterDomain, goOverview, drillDomain, search };
+    })();
+
+    // ─── Provenance Helpers ──────────────────────────────────────────
+    function formatProvenanceBadge(provenance, sourceUrl) {
+      if (!provenance && !sourceUrl) return '';
+      const p = provenance || { type: 'url', url: sourceUrl };
+      const linkStyle = 'font-size:11px;color:var(--accent-text);text-decoration:none;display:inline-flex;align-items:center;gap:3px';
+      switch (p.type) {
+        case 'url':
+          return p.url
+            ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" style="${linkStyle}" title="${escapeHtml(p.title || p.url)}">&#x2197; ${escapeHtml(p.title || 'source')}</a>`
+            : '';
+        case 'pdf':
+          const pageInfo = p.pageRange || (p.page ? `p.${p.page}` : '');
+          const pdfLabel = `PDF${pageInfo ? ' ' + pageInfo : ''}`;
+          return p.url
+            ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" style="${linkStyle}" title="${escapeHtml(p.title || 'PDF')}">&#x1F4C4; ${escapeHtml(pdfLabel)}</a>`
+            : `<span style="${linkStyle}">&#x1F4C4; ${escapeHtml(pdfLabel)}</span>`;
+        case 'database':
+          const dbLabel = p.table ? `DB: ${p.table}` : 'Database';
+          return `<span style="${linkStyle}" title="${escapeHtml(p.query || '')}">&#x1F5C4; ${escapeHtml(dbLabel)}</span>`;
+        case 'file':
+          return `<span style="${linkStyle}" title="${escapeHtml(p.path || '')}">&#x1F4C1; ${escapeHtml(p.path ? p.path.split('/').pop() : 'file')}</span>`;
+        case 'api':
+          return `<span style="${linkStyle}" title="${escapeHtml(p.endpoint || '')}">&#x26A1; ${escapeHtml(p.endpoint || 'API')}</span>`;
+        default:
+          return sourceUrl
+            ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener" style="${linkStyle}">&#x2197; source</a>`
+            : '';
+      }
+    }
+
+    function resetProvenanceFields() {
+      document.getElementById('edit-prov-type').value = '';
+      document.getElementById('edit-prov-title').value = '';
+      ['url', 'pdf', 'database', 'file', 'api'].forEach(t => {
+        document.getElementById(`prov-fields-${t}`).classList.add('hidden');
+      });
+      document.querySelectorAll('[id^="edit-prov-"]').forEach(el => {
+        if (el.tagName === 'INPUT') el.value = '';
+      });
+    }
+
+    function updateProvenanceFields() {
+      const type = document.getElementById('edit-prov-type').value;
+      ['url', 'pdf', 'database', 'file', 'api'].forEach(t => {
+        const el = document.getElementById(`prov-fields-${t}`);
+        if (el) {
+          el.classList.toggle('hidden', t !== type);
+          if (t === type) el.style.display = 'flex';
+        }
+      });
+    }
+
+    function populateProvenanceFields(provenance, sourceUrl) {
+      resetProvenanceFields();
+      const p = provenance || (sourceUrl ? { type: 'url', url: sourceUrl } : null);
+      if (!p) return;
+      document.getElementById('edit-prov-type').value = p.type || '';
+      document.getElementById('edit-prov-title').value = p.title || '';
+      updateProvenanceFields();
+      switch (p.type) {
+        case 'url':
+          document.getElementById('edit-prov-url').value = p.url || '';
+          break;
+        case 'pdf':
+          document.getElementById('edit-prov-pdf-url').value = p.url || '';
+          document.getElementById('edit-prov-page').value = p.pageRange || (p.page ? String(p.page) : '');
+          break;
+        case 'database':
+          document.getElementById('edit-prov-table').value = p.table || '';
+          document.getElementById('edit-prov-query').value = p.query || '';
+          break;
+        case 'file':
+          document.getElementById('edit-prov-path').value = p.path || '';
+          break;
+        case 'api':
+          document.getElementById('edit-prov-endpoint').value = p.endpoint || '';
+          break;
+      }
+    }
+
+    function buildProvenanceFromForm() {
+      const type = document.getElementById('edit-prov-type').value;
+      if (!type) return null;
+      const prov = { type };
+      const title = document.getElementById('edit-prov-title').value.trim();
+      if (title) prov.title = title;
+      switch (type) {
+        case 'url':
+          const url = document.getElementById('edit-prov-url').value.trim();
+          if (url) prov.url = url;
+          break;
+        case 'pdf':
+          const pdfUrl = document.getElementById('edit-prov-pdf-url').value.trim();
+          if (pdfUrl) prov.url = pdfUrl;
+          const pageVal = document.getElementById('edit-prov-page').value.trim();
+          if (pageVal) {
+            if (pageVal.includes('-')) prov.pageRange = pageVal;
+            else if (!isNaN(parseInt(pageVal))) prov.page = parseInt(pageVal);
+            else prov.pageRange = pageVal;
+          }
+          break;
+        case 'database':
+          const table = document.getElementById('edit-prov-table').value.trim();
+          const query = document.getElementById('edit-prov-query').value.trim();
+          if (table) prov.table = table;
+          if (query) prov.query = query;
+          break;
+        case 'file':
+          const path = document.getElementById('edit-prov-path').value.trim();
+          if (path) prov.path = path;
+          break;
+        case 'api':
+          const endpoint = document.getElementById('edit-prov-endpoint').value.trim();
+          if (endpoint) prov.endpoint = endpoint;
+          break;
+      }
+      return prov;
+    }
+
+    function toggleGraphLegend() {
+      const legend = document.getElementById('graph-legend');
+      const toggle = document.getElementById('graph-legend-toggle');
+      const isVisible = legend.style.display !== 'none';
+      legend.style.display = isVisible ? 'none' : 'block';
+      toggle.style.display = isVisible ? 'flex' : 'none';
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function renderMarkdown(text) {
+      if (!text) return '';
+      // Split into blocks by double newline
+      const blocks = text.split(/\n\n+/);
+      return blocks.map(block => {
+        block = block.trim();
+        if (!block) return '';
+
+        // Numbered list (1. item\n2. item)
+        if (/^\d+\.\s/.test(block)) {
+          const items = block.split(/\n(?=\d+\.\s)/).map(li => {
+            const content = li.replace(/^\d+\.\s*/, '');
+            return `<li style="margin-bottom:4px">${inlineMarkdown(escapeHtml(content))}</li>`;
+          }).join('');
+          return `<ol style="margin:0 0 12px 0;padding-left:20px;line-height:1.6">${items}</ol>`;
+        }
+
+        // Bullet list (- item or * item)
+        if (/^[-*]\s/.test(block)) {
+          const items = block.split(/\n(?=[-*]\s)/).map(li => {
+            const content = li.replace(/^[-*]\s*/, '');
+            return `<li style="margin-bottom:4px">${inlineMarkdown(escapeHtml(content))}</li>`;
+          }).join('');
+          return `<ul style="margin:0 0 12px 0;padding-left:20px;line-height:1.6">${items}</ul>`;
+        }
+
+        // Heading (### or ##)
+        const headingMatch = block.match(/^(#{1,4})\s+(.*)/);
+        if (headingMatch) {
+          const level = headingMatch[1].length;
+          const sizes = { 1: '18px', 2: '16px', 3: '14px', 4: '13px' };
+          return `<div style="font-size:${sizes[level] || '14px'};font-weight:600;margin:0 0 8px 0;color:var(--text-primary)">${inlineMarkdown(escapeHtml(headingMatch[2]))}</div>`;
+        }
+
+        // Regular paragraph — handle single-newline lines within it
+        const lines = block.split('\n');
+        if (lines.length > 1 && lines.some(l => /^[-*]\s/.test(l.trim()))) {
+          // Mixed paragraph with inline list items
+          const items = lines.filter(l => l.trim()).map(l => {
+            const content = l.trim().replace(/^[-*]\s*/, '');
+            return `<li style="margin-bottom:4px">${inlineMarkdown(escapeHtml(content))}</li>`;
+          }).join('');
+          return `<ul style="margin:0 0 12px 0;padding-left:20px;line-height:1.6">${items}</ul>`;
+        }
+
+        return `<p style="margin:0 0 12px 0;line-height:1.6">${inlineMarkdown(escapeHtml(block.replace(/\n/g, '<br>')))}</p>`;
+      }).join('');
+    }
+
+    function inlineMarkdown(html) {
+      return html
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')      // **bold**
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')                   // *italic*
+        .replace(/`([^`]+)`/g, '<code style="background:var(--bg-hover);padding:1px 5px;border-radius:3px;font-size:0.9em">$1</code>');  // `code`
+    }
+  </script>
+</body>
+</html>

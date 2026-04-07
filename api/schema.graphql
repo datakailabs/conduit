@@ -1,0 +1,341 @@
+# Conduit GraphQL Schema
+# Knowledge Graph and Semantic Search API
+
+"""
+A Zettel represents an atomic unit of knowledge from Scriptorium
+"""
+type Zettel {
+  id: ID!
+  title: String!
+  summary: String
+  content: String!
+  created: DateTime!
+  updated: DateTime!
+
+  # Metadata
+  domains: [String!]!
+  topics: [String!]!
+  knowledgeType: KnowledgeType!
+  contextSource: ContextSource!
+
+  # Relationships
+  relationships: [Relationship!]!
+}
+
+"""
+Relationship between two Zettels
+"""
+type Relationship {
+  type: RelationshipType!
+  target: Zettel!
+  properties: RelationshipProperties
+}
+
+"""
+Properties that describe how concepts relate
+"""
+type RelationshipProperties {
+  how: String
+  why: String
+  where: String
+  order: Int
+  pattern: String
+  domain: String
+}
+
+"""
+Tenant organization (multi-tenancy)
+"""
+type Organization {
+  id: ID!
+  name: String!
+  isActive: Boolean!
+}
+
+"""
+Types of relationships between concepts
+"""
+enum RelationshipType {
+  EXTENDS      # Builds upon or enhances
+  REQUIRES     # Prerequisite knowledge
+  APPLIES      # Uses pattern in new context
+  CONTRADICTS  # Alternative approach
+  IMPLEMENTS   # Concrete realization
+}
+
+"""
+Types of knowledge captured in Zettels
+"""
+enum KnowledgeType {
+  CONCEPT
+  PATTERN
+  ANTIPATTERN
+  PRINCIPLE
+  TECHNIQUE
+  GOTCHA
+  TOOL
+  REFERENCE
+}
+
+"""
+Source of the knowledge
+"""
+enum ContextSource {
+  EXPERIENCE
+  RESEARCH
+  DISCUSSION
+  ARTICLE
+  VENDOR_DOC
+  PROJECT
+}
+
+"""
+Result from semantic search
+"""
+type SearchResult {
+  score: Float!
+  zettelId: ID!
+  zettelTitle: String!
+  section: String!
+  content: String!
+  chunkIndex: Int!
+
+  metadata: ZettelMetadata!
+}
+
+"""
+Metadata for filtering and display
+"""
+type ZettelMetadata {
+  domains: [String!]!
+  topics: [String!]!
+  knowledgeType: KnowledgeType!
+  contextSource: ContextSource!
+  created: DateTime!
+  updated: DateTime!
+}
+
+"""
+Concept graph exploration result
+"""
+type ConceptGraph {
+  concept: Zettel!
+  relationships: [Relationship!]!
+  depth: Int!
+}
+
+"""
+Learning path between two concepts
+"""
+type PrerequisitePath {
+  path: [PathStep!]!
+  totalSteps: Int!
+  estimatedTime: String
+}
+
+"""
+Step in a learning path
+"""
+type PathStep {
+  zettelId: ID!
+  title: String!
+  summary: String
+  relationshipType: RelationshipType!
+  order: Int!
+}
+
+"""
+Statistics about the Knowledge Graph
+"""
+type KnowledgeGraphStats {
+  totalZettels: Int!
+  totalRelationships: Int!
+  totalChunks: Int!
+  domainBreakdown: [DomainStats!]!
+  lastUpdated: DateTime!
+}
+
+"""
+Statistics per domain
+"""
+type DomainStats {
+  domain: String!
+  zettelCount: Int!
+  topTopics: [TopicCount!]!
+}
+
+"""
+Topic usage count
+"""
+type TopicCount {
+  topic: String!
+  count: Int!
+}
+
+"""
+A Kai is a named knowledge view (saved filter) within an organization
+"""
+type Kai {
+  id: ID!
+  name: String!
+  description: String
+  domains: [String!]!
+  topics: [String!]!
+  knowledgeTypes: [String!]!
+  isDefault: Boolean!
+  createdAt: String!
+}
+
+# ============================================================================
+# Queries
+# ============================================================================
+
+type Query {
+  """
+  Semantic search across all knowledge using pgvector similarity
+  """
+  semanticSearch(
+    query: String!
+    domain: String
+    topics: [String!]
+    knowledgeType: KnowledgeType
+    limit: Int = 10
+  ): [SearchResult!]!
+
+  """
+  Get a single Zettel by ID
+  """
+  zettel(id: ID!): Zettel
+
+  """
+  Explore concept graph from a starting Zettel
+  """
+  conceptGraph(
+    zettelId: ID!
+    depth: Int = 1
+    relationshipTypes: [RelationshipType!]
+  ): ConceptGraph
+
+  """
+  Find prerequisite learning path between two concepts
+  """
+  prerequisitePath(
+    from: ID!
+    to: ID!
+  ): PrerequisitePath
+
+  """
+  Get directly related concepts
+  """
+  relatedConcepts(
+    zettelId: ID!
+    relationshipType: RelationshipType
+    limit: Int = 10
+  ): [Relationship!]!
+
+  """
+  Search Zettels by topic
+  """
+  zettelsByTopic(
+    topic: String!
+    domain: String
+    limit: Int = 50
+  ): [Zettel!]!
+
+  """
+  Search Zettels by domain
+  """
+  zettelsByDomain(
+    domain: String!
+    knowledgeType: KnowledgeType
+    limit: Int = 50
+  ): [Zettel!]!
+
+  """
+  Get Knowledge Graph statistics
+  """
+  stats: KnowledgeGraphStats!
+
+  """
+  Get current organization info
+  """
+  organization: Organization
+
+  """
+  List all Kais for the current organization
+  """
+  kais: [Kai!]!
+
+  """
+  Get a single Kai by ID
+  """
+  kai(id: ID!): Kai
+}
+
+# ============================================================================
+# Mutations (Admin only)
+# ============================================================================
+
+type Mutation {
+  """
+  Ingest a Zettel from Scriptorium (admin only)
+  """
+  ingestZettel(filePath: String!): IngestResult!
+
+  """
+  Re-index all Zettels from Scriptorium (admin only)
+  """
+  reindexAll(path: String): ReindexResult!
+
+  """
+  Delete a Zettel from PostgreSQL and ArangoDB (admin only)
+  """
+  deleteZettel(id: ID!): Boolean!
+
+  """
+  Create a new Kai (saved knowledge filter)
+  """
+  createKai(name: String!, description: String, domains: [String!], topics: [String!], knowledgeTypes: [String!]): Kai!
+
+  """
+  Update an existing Kai
+  """
+  updateKai(id: ID!, name: String, domains: [String!], topics: [String!], knowledgeTypes: [String!]): Kai
+
+  """
+  Delete a Kai (cannot delete the default Kai)
+  """
+  deleteKai(id: ID!): Boolean!
+}
+
+"""
+Result of ingesting a single Zettel
+"""
+type IngestResult {
+  success: Boolean!
+  zettelId: ID
+  chunksCreated: Int
+  relationshipsCreated: Int
+  error: String
+}
+
+"""
+Result of reindexing operation
+"""
+type ReindexResult {
+  success: Boolean!
+  zettelsProcessed: Int!
+  chunksCreated: Int!
+  relationshipsCreated: Int!
+  errors: [String!]!
+  duration: String!
+}
+
+# ============================================================================
+# Custom Scalars
+# ============================================================================
+
+"""
+ISO 8601 datetime string with timezone
+"""
+scalar DateTime

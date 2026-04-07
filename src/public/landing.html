@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conduit - Knowledge Graph API</title>
+  <style>
+    :root {
+      --sky-400: #38bdf8; --sky-500: #0ea5e9; --sky-600: #0284c7;
+      --violet-500: #8b5cf6;
+      --gray-50: #f9fafb; --gray-400: #9ca3af; --gray-500: #6b7280;
+      --gray-800: #1f2937; --gray-900: #111827; --gray-950: #030712;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background: var(--gray-950);
+      color: var(--gray-50);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: -1;
+      opacity: 0.03;
+      background-image: radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0);
+      background-size: 32px 32px;
+      pointer-events: none;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, var(--sky-400), var(--violet-500));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .tagline {
+      font-size: 16px;
+      color: var(--gray-400);
+      margin-bottom: 48px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 40px;
+      margin-bottom: 48px;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--sky-400);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    .endpoints {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 48px;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 13px;
+    }
+
+    .endpoint {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px;
+    }
+
+    .method {
+      font-weight: 600;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      min-width: 44px;
+      text-align: center;
+    }
+
+    .method-post { background: rgba(14,165,233,0.15); color: var(--sky-400); }
+    .method-get { background: rgba(16,185,129,0.15); color: #34d399; }
+
+    .path { color: var(--gray-400); }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--sky-500);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: var(--sky-600); }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: var(--gray-50);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+
+    footer {
+      padding: 24px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--gray-500);
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-bottom: 32px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #34d399;
+    }
+
+    .status-dot.loading {
+      background: var(--gray-500);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="logo">Conduit</div>
+    <div class="tagline">Knowledge Graph API</div>
+
+    <div class="status">
+      <div class="status-dot loading" id="status-dot"></div>
+      <span id="status-text">Checking...</span>
+    </div>
+
+    <div class="stats" id="stats" style="display:none">
+      <div class="stat">
+        <div class="stat-value" id="stat-zettels">-</div>
+        <div class="stat-label">Zettels</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-chunks">-</div>
+        <div class="stat-label">Chunks</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-domains">-</div>
+        <div class="stat-label">Domains</div>
+      </div>
+    </div>
+
+    <div class="endpoints">
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/v1/context</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/v1/ask</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/v1/extract</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/v1/concepts/match</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/graphql</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/health</span></div>
+    </div>
+
+    <div class="actions">
+      <a href="/console" class="btn-primary">Open Console</a>
+      <a href="/health" class="btn-secondary">Health Check</a>
+    </div>
+  </main>
+
+  <footer>DataKai</footer>
+
+  <script>
+    fetch('/health')
+      .then(r => r.json())
+      .then(d => {
+        document.getElementById('status-dot').classList.remove('loading');
+        document.getElementById('status-text').textContent = 'Operational';
+      })
+      .catch(() => {
+        document.getElementById('status-dot').style.background = '#f87171';
+        document.getElementById('status-dot').classList.remove('loading');
+        document.getElementById('status-text').textContent = 'Unreachable';
+      });
+
+    // Try to fetch stats (unauthenticated — will show if public, hide if not)
+    fetch('/api/v1/dashboard/stats', { headers: { 'Authorization': 'Bearer public' } })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(d => {
+        document.getElementById('stats').style.display = 'flex';
+        document.getElementById('stat-zettels').textContent = (d.zettels || 0).toLocaleString();
+        document.getElementById('stat-chunks').textContent = (d.chunks || 0).toLocaleString();
+        document.getElementById('stat-domains').textContent = (d.domains || []).length;
+      })
+      .catch(() => {
+        // Stats require auth — show static placeholder
+        document.getElementById('stats').style.display = 'flex';
+      });
+  </script>
+</body>
+</html>

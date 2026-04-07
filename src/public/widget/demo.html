@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conduit Chat Widget — Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      padding: 40px;
+    }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    p { color: #64748b; margin-bottom: 24px; line-height: 1.6; }
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      max-width: 720px;
+    }
+    .card h2 { font-size: 16px; margin-bottom: 12px; }
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 13px;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+    code { font-family: 'SF Mono', 'Fira Code', monospace; }
+    .note {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #92400e;
+      margin-bottom: 20px;
+    }
+    .config-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .config-form label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .config-form input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .config-form .full { grid-column: 1 / -1; }
+    button.demo-btn {
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button.demo-btn:hover { background: #0284c7; }
+  </style>
+</head>
+<body>
+  <h1>Conduit Chat Widget</h1>
+  <p>An embeddable chat widget that connects to your Conduit knowledge graph.</p>
+
+  <div class="note">
+    The widget floats in the bottom-right corner. Click the chat bubble to open it.
+    Configure your Conduit API URL and key below, then click "Launch Widget."
+  </div>
+
+  <div class="card">
+    <h2>Configuration</h2>
+    <div class="config-form">
+      <div class="full">
+        <label>API Base URL</label>
+        <input type="text" id="demo-api" placeholder="http://localhost:3333/api/v1" />
+      </div>
+      <div class="full">
+        <label>API Key</label>
+        <input type="password" id="demo-key" placeholder="your-api-key" />
+      </div>
+      <div>
+        <label>Title</label>
+        <input type="text" id="demo-title" value="Ask Conduit" />
+      </div>
+      <div>
+        <label>Accent Color</label>
+        <input type="text" id="demo-accent" value="#0ea5e9" />
+      </div>
+    </div>
+    <button class="demo-btn" onclick="launchWidget()">Launch Widget</button>
+  </div>
+
+  <div class="card">
+    <h2>Script Tag Embed</h2>
+    <pre><code>&lt;script
+  src="https://your-conduit/static/widget/conduit-chat.js"
+  data-api="https://your-conduit/api/v1"
+  data-key="your-api-key"
+  data-title="Ask anything"
+  data-accent="#8b5cf6"
+  data-suggestions="What is Snowflake?|How does Iceberg work?|Compare Spark vs Flink"
+  data-persist="true"&gt;
+&lt;/script&gt;</code></pre>
+  </div>
+
+  <div class="card">
+    <h2>Programmatic API</h2>
+    <pre><code>// Initialize
+ConduitChat.init({
+  api: 'https://your-conduit/api/v1',
+  key: 'your-api-key',
+  title: 'Knowledge Assistant',
+  accent: '#8b5cf6',
+  mode: 'standard',        // or 'swarm'
+  position: 'bottom-right', // or 'bottom-left'
+  suggestions: ['What is Snowflake?', 'How does Iceberg work?'],
+  persist: true,            // save chat history to localStorage
+});
+
+// Control
+ConduitChat.open();
+ConduitChat.close();
+ConduitChat.toggle();
+
+// Send a question programmatically
+ConduitChat.ask('What is GraphRAG?');
+
+// Clear chat history
+ConduitChat.clearHistory();
+
+// Tear down
+ConduitChat.destroy();</code></pre>
+  </div>
+
+  <div class="card">
+    <h2>React / Dojo Integration</h2>
+    <pre><code>import { useEffect } from 'react';
+
+function KnowledgeChat({ apiKey }) {
+  useEffect(() => {
+    // Load widget script
+    const script = document.createElement('script');
+    script.src = '/static/widget/conduit-chat.js';
+    script.onload = () => {
+      window.ConduitChat.init({
+        api: process.env.NEXT_PUBLIC_CONDUIT_API,
+        key: apiKey,
+        title: 'Study Assistant',
+        greeting: 'Ask me about any concept!',
+      });
+    };
+    document.body.appendChild(script);
+    return () => window.ConduitChat?.destroy();
+  }, [apiKey]);
+
+  return null; // Widget manages its own DOM
+}</code></pre>
+  </div>
+
+  <script src="conduit-chat.js"></script>
+  <script>
+    function launchWidget() {
+      if (window.ConduitChat) window.ConduitChat.destroy();
+      window.ConduitChat.init({
+        api: document.getElementById('demo-api').value || 'http://localhost:3333/api/v1',
+        key: document.getElementById('demo-key').value || 'demo',
+        title: document.getElementById('demo-title').value || 'Ask Conduit',
+        accent: document.getElementById('demo-accent').value || '#0ea5e9',
+        suggestions: ['What is Snowflake?', 'How does Iceberg work?', 'Compare Spark vs Flink'],
+        persist: true,
+      });
+    }
+  </script>
+</body>
+</html>
