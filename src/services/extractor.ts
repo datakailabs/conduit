@@ -42,6 +42,7 @@ export interface ExtractionUnitResult {
   topics: string[];
   isDuplicate: boolean;
   duplicateOf?: string;
+  mergedInto?: string;
   similarityScore?: number;
   ingested?: boolean;
 }
@@ -49,6 +50,7 @@ export interface ExtractionUnitResult {
 export interface ExtractionResult {
   extracted: number;
   novel: number;
+  merged: number;
   duplicates: number;
   discarded: number;
   units: ExtractionUnitResult[];
@@ -189,14 +191,16 @@ export class ExtractorService {
       if (unit.domains.length === 0) unit.domains = ['general'];
     }
 
-    // 4. Dedup and ingest each unit
+    // 4. Dedup, merge, and ingest each unit
     const unitResults: ExtractionUnitResult[] = [];
     let novelCount = 0;
     let dupCount = 0;
+    let mergeCount = 0;
 
     for (const unit of confident) {
       const dedupResult = await this.checkDuplicate(orgId, unit);
 
+      // Exact duplicate → skip
       if (dedupResult.isDuplicate) {
         dupCount++;
         unitResults.push({
@@ -212,11 +216,53 @@ export class ExtractorService {
         continue;
       }
 
+      // Merge candidate → update existing zettel with new info
+      if (dedupResult.isMergeCandidate && dedupResult.duplicateOf && dedupResult.existingContent && ingest) {
+        const merged = await this.mergeZettel(
+          { title: dedupResult.existingTitle || unit.title, content: dedupResult.existingContent },
+          unit
+        );
+
+        if (merged) {
+          mergeCount++;
+          const existingId = dedupResult.duplicateOf;
+
+          const resolvedRelationships = await this.resolveRelationships(orgId, unit.relationships);
+
+          const result = await this.ingestion.ingestKnowledgeUnit(orgId, {
+            id: existingId, // Reuse existing ID → upsert overwrites
+            title: merged.title,
+            content: merged.content,
+            domains: unit.domains,
+            topics: unit.topics,
+            knowledgeType: unit.knowledgeType,
+            contextSource: unit.contextSource,
+            relationships: resolvedRelationships,
+            sourceUrl: options.sourceUrl,
+            provenance: options.provenance,
+          });
+
+          unitResults.push({
+            id: existingId,
+            title: merged.title,
+            knowledgeType: unit.knowledgeType,
+            domains: unit.domains,
+            topics: unit.topics,
+            isDuplicate: false,
+            mergedInto: existingId,
+            similarityScore: dedupResult.score,
+            ingested: result.success,
+          });
+          continue;
+        }
+        // Merge failed → fall through to create as new
+      }
+
+      // Novel unit → create new
       novelCount++;
       const unitId = `zettel-extract-${randomUUID().slice(0, 12)}`;
 
       if (ingest && !options.contextSource?.startsWith('__dry')) {
-        // Resolve relationships to zettel IDs
         const resolvedRelationships = await this.resolveRelationships(orgId, unit.relationships);
 
         const result = await this.ingestion.ingestKnowledgeUnit(orgId, {
@@ -286,6 +332,7 @@ export class ExtractorService {
     return {
       extracted: confident.length,
       novel: novelCount,
+      merged: mergeCount,
       duplicates: dupCount,
       discarded,
       units: unitResults,
@@ -355,32 +402,101 @@ export class ExtractorService {
     }
   }
 
+  private static readonly MERGE_THRESHOLD = 0.70;
+
   private async checkDuplicate(
     orgId: string,
     unit: ExtractedUnit
-  ): Promise<{ isDuplicate: boolean; duplicateOf?: string; score: number }> {
+  ): Promise<{
+    isDuplicate: boolean;
+    isMergeCandidate: boolean;
+    duplicateOf?: string;
+    existingContent?: string;
+    existingTitle?: string;
+    score: number;
+  }> {
     try {
       const textToEmbed = `${unit.title}\n\n${unit.content}`;
       const embedding = await this.embeddings.generateEmbedding(textToEmbed);
       const results = await this.vectorStore.search(orgId, embedding, 1);
 
       if (results.length === 0) {
-        return { isDuplicate: false, score: 0 };
+        return { isDuplicate: false, isMergeCandidate: false, score: 0 };
       }
 
       const topMatch = results[0];
+
+      // Exact duplicate (>= 0.85) → skip
       if (topMatch.score >= this.dedupThreshold) {
         return {
           isDuplicate: true,
+          isMergeCandidate: false,
           duplicateOf: topMatch.zettelId,
           score: topMatch.score,
         };
       }
 
-      return { isDuplicate: false, score: topMatch.score };
+      // Merge candidate (0.70–0.85) → same concept, new info
+      if (topMatch.score >= ExtractorService.MERGE_THRESHOLD) {
+        return {
+          isDuplicate: false,
+          isMergeCandidate: true,
+          duplicateOf: topMatch.zettelId,
+          existingTitle: topMatch.zettelTitle,
+          existingContent: topMatch.content,
+          score: topMatch.score,
+        };
+      }
+
+      return { isDuplicate: false, isMergeCandidate: false, score: topMatch.score };
     } catch (error) {
       console.error('⚠️ Dedup check failed, treating as novel:', error);
-      return { isDuplicate: false, score: 0 };
+      return { isDuplicate: false, isMergeCandidate: false, score: 0 };
+    }
+  }
+
+  /**
+   * Merge a new knowledge unit into an existing one via LLM.
+   * Produces an updated zettel that incorporates new information.
+   */
+  private async mergeZettel(
+    existing: { title: string; content: string },
+    incoming: ExtractedUnit
+  ): Promise<{ title: string; content: string } | null> {
+    try {
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0,
+        max_tokens: 1024,
+        messages: [
+          {
+            role: 'system',
+            content: `You merge knowledge units. Given an existing unit and new information about the same topic, produce a single updated unit that:
+- Incorporates any new facts, details, or corrections from the new version
+- Preserves valuable content from the existing version that isn't contradicted
+- If the new information contradicts the old, prefer the new (it's more recent)
+- Keep the same depth and style as the existing unit
+- Output ONLY a JSON object: {"title": "...", "content": "..."}`
+          },
+          {
+            role: 'user',
+            content: `EXISTING UNIT:\nTitle: ${existing.title}\n\n${existing.content}\n\n---\n\nNEW INFORMATION:\nTitle: ${incoming.title}\n\n${incoming.content}`
+          },
+        ],
+        response_format: { type: 'json_object' },
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) return null;
+
+      const parsed = JSON.parse(content);
+      if (typeof parsed.title === 'string' && typeof parsed.content === 'string') {
+        return { title: parsed.title, content: parsed.content };
+      }
+      return null;
+    } catch (error) {
+      console.error('⚠️ Merge failed, will create as new:', error);
+      return null;
     }
   }
 
