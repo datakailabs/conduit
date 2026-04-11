@@ -26,7 +26,9 @@ import { createAuthRouter } from './routes/auth.js';
 import { createDashboardRouter } from './routes/dashboard.js';
 import { createExtractRouter } from './routes/extract.js';
 import { createAskRouter } from './routes/ask.js';
+import { createInsightsRouter } from './routes/insights.js';
 import { ThreadResolver } from './services/thread-resolver.js';
+import { InsightsService } from './services/insights.js';
 import { createZettelsRouter } from './routes/zettels.js';
 import { createConnectorsRouter } from './routes/connectors.js';
 import { createConceptsRouter } from './routes/concepts.js';
@@ -85,10 +87,11 @@ async function startServer() {
     process.exit(1);
   }
 
-  // Initialize UsageMeter, ChatLogger, and ThreadResolver
+  // Initialize UsageMeter, ChatLogger, ThreadResolver, and InsightsService
   const usageMeter = new UsageMeter(pool);
   const chatLogger = new ChatLogger(pool);
   const threadResolver = new ThreadResolver(pool);
+  const insightsService = new InsightsService(pool);
 
   // Create Express app
   const app = express();
@@ -211,6 +214,9 @@ async function startServer() {
 
   // Ask endpoint (bearer auth required — GraphRAG + LLM synthesis)
   app.use('/api/v1/ask', bearerAuth, rateLimiter, createAskRouter(usageMeter, chatLogger, threadResolver));
+
+  // Insights endpoint (bearer auth required — cross-domain synthesis)
+  app.use('/api/v1/insights', bearerAuth, rateLimiter, createInsightsRouter(insightsService));
 
   // Zettel CRUD (bearer auth required — source inspection + editing)
   app.use('/api/v1/zettels', bearerAuth, rateLimiter, createZettelsRouter());
