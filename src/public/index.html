@@ -1471,9 +1471,9 @@
           <div style="padding:12px 20px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;gap:12px${!k.is_active ? ';opacity:0.5' : ''}">
             <div style="flex:1;min-width:0">
               <div style="display:flex;align-items:center;gap:8px">
-                <code style="font-size:13px;color:var(--text-primary)">${k.key_prefix}...</code>
-                <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${k.key_type === 'admin' ? 'var(--accent)' : 'var(--bg-secondary)'};color:${k.key_type === 'admin' ? 'white' : 'var(--text-secondary)'}">${k.key_type}</span>
-                <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:var(--bg-secondary);color:var(--text-tertiary)">${k.scope || 'admin'}</span>
+                <code style="font-size:13px;color:var(--text-primary)">${escapeHtml(k.key_prefix)}...</code>
+                <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${k.key_type === 'admin' ? 'var(--accent)' : 'var(--bg-secondary)'};color:${k.key_type === 'admin' ? 'white' : 'var(--text-secondary)'}">${escapeHtml(k.key_type)}</span>
+                <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:var(--bg-secondary);color:var(--text-tertiary)">${escapeHtml(k.scope || 'admin')}</span>
                 ${!k.is_active ? '<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:var(--danger);color:white">revoked</span>' : ''}
               </div>
               <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">
@@ -1481,7 +1481,7 @@
                 ${k.last_used_at ? ' &middot; Last used ' + new Date(k.last_used_at).toLocaleDateString() : ''}
               </div>
             </div>
-            ${k.is_active ? `<button onclick="revokeConsoleKey('${k.id}')" style="padding:4px 12px;font-size:12px;background:none;border:1px solid var(--danger);border-radius:6px;color:var(--danger);cursor:pointer">Revoke</button>` : ''}
+            ${k.is_active ? `<button onclick="revokeConsoleKey('${escapeHtml(k.id)}')" style="padding:4px 12px;font-size:12px;background:none;border:1px solid var(--danger);border-radius:6px;color:var(--danger);cursor:pointer">Revoke</button>` : ''}
           </div>
         `).join('');
       } catch (e) {

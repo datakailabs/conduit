@@ -133,6 +133,17 @@ async function startServer() {
   app.use(requestLogger);
   app.use(metricsMiddleware);
 
+  // Security headers
+  app.disable('x-powered-by');
+  app.use((_req, res, next) => {
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('X-Frame-Options', 'DENY');
+    res.set('X-XSS-Protection', '1; mode=block');
+    res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
+
   // Conduit Console (static UI — no cache during development)
   app.use('/static', express.static(join(__dirname, 'public'), { etag: false, lastModified: false }));
   app.get('/console', (_req, res) => {
@@ -151,7 +162,14 @@ async function startServer() {
     res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
   });
 
-  app.get('/metrics', (_req, res) => {
+  app.get('/metrics', (req, res) => {
+    // Metrics require bearer auth or localhost access
+    const authHeader = req.headers.authorization || '';
+    const isLocal = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
+    if (!isLocal && !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
     res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
     res.send(metrics.serialize());
   });
@@ -235,6 +253,7 @@ async function startServer() {
   const server = new ApolloServer<TenantContext>({
     typeDefs,
     resolvers,
+    includeStacktraceInErrorResponses: serverConfig.nodeEnv !== 'production',
   });
 
   await server.start();
